@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import type { PrismaClient } from '@pins/crowndev-database/src/client/client.ts';
 import { buildAuditService } from './service.ts';
 import type { AuditEntry } from './types.ts';
-import type { EntraGroupMembers } from '../../util/entra-groups.ts';
+import type { EntraGroupMembers } from '@pins/crowndev-lib/util/entra-groups.ts';
 import type { GroupMember } from '@pins/crowndev-lib/graph/types.js';
 import { mockLogger } from '@pins/crowndev-lib/testing/mock-logger.js';
 import type { Logger } from 'pino';

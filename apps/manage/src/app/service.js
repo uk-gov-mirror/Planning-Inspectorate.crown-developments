@@ -5,7 +5,6 @@ import { MapCache } from '@pins/crowndev-lib/util/map-cache.js';
 import { buildInitEntraClient } from '@pins/crowndev-lib/graph/cached-entra-client.js';
 import { initLogger } from '@pins/crowndev-lib/util/logger.ts';
 import { initGovNotify } from '@pins/crowndev-lib/govnotify/index.ts';
-import { buildAuditService } from './audit/index.ts';
 import { TextAnalyticsClient } from '@azure/ai-text-analytics';
 import { DefaultAzureCredential, ManagedIdentityCredential } from '@azure/identity';
 import { DEFAULT_CATEGORIES } from '#util/azure-language-redaction.js';
@@ -15,11 +14,13 @@ import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-grap
 import { initBlobStore } from '@pins/crowndev-lib/blob-store/index.ts';
 import { EntraClient } from '@pins/crowndev-lib/graph/entra.js';
 import { ZipArchive } from 'archiver';
+import { BaseService } from '@pins/crowndev-lib/app/base-service.ts';
+import { buildAuditService } from '@pins/crowndev-lib/audit/index.ts';
 
 /**
  * This class encapsulates all the services and clients for the application
  */
-export class ManageService {
+export class ManageService extends BaseService {
 	/**
 	 * @type {import('./config-types.js').Config}
 	 */
@@ -33,7 +34,7 @@ export class ManageService {
 	 */
 	dbClient;
 	/**
-	 * @type {import('./audit/index.js').AuditService}
+	 * @type {import('@pins/crowndev-lib/audit/index.js').AuditService}
 	 */
 	audit;
 	/**
@@ -77,6 +78,7 @@ export class ManageService {
 	 * @param {import('./config-types.js').Config} config
 	 */
 	constructor(config) {
+		super(config);
 		this.#config = config;
 		const logger = initLogger(config);
 		this.logger = logger;
@@ -97,6 +99,7 @@ export class ManageService {
 		this.blobStoreClient = initBlobStore(config.blobStore, logger);
 		this.appEntraClient = new EntraClient(graphClient);
 		this.createZipArchive = (options) => new ZipArchive(options);
+		this.auditLogDataModels = config.auditLogDataModels;
 
 		// set up the Azure AI Language client if configured
 		if (config.azureLanguage.endpoint) {

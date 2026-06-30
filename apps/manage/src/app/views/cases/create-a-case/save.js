@@ -15,7 +15,7 @@ import {
 } from '@pins/crowndev-database/src/seed/data-static.ts';
 import { getLinkedCaseId, hasLinkedCase as hasLinkedCaseFunction } from '@pins/crowndev-lib/util/linked-case.ts';
 import { extractAgentContactFields, extractApplicantContactFields } from '../util/contact.js';
-import { AUDIT_ACTIONS } from '../../../audit/index.ts';
+import { AUDIT_ACTIONS } from '@pins/crowndev-lib/audit/index.ts';
 import { retryGrantPermissions } from '#util/sharepoint.js';
 
 /**

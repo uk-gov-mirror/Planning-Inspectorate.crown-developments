@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'url';
 import { loadEnvFile } from 'node:process';
+//import type { BaseConfig } from '@pins/crowndev-lib/app/config-types.d.ts';
 
+// REFERENCE export interface Config extends BaseConfig {
 /**
  * The environment names
  *
@@ -72,7 +74,8 @@ export function loadConfig() {
 		BLOB_STORE_DISABLED,
 		BLOB_STORE_HOST,
 		BLOB_STORE_CONTAINER,
-		BLOB_STORE_CONNECTION_STRING
+		BLOB_STORE_CONNECTION_STRING,
+		AUDIT_LOG_DATA_MODELS
 	} = process.env;
 
 	const buildConfig = loadBuildConfig();
@@ -179,6 +182,7 @@ export function loadConfig() {
 			redirectUri: `${protocol}${APP_HOSTNAME}/auth/redirect`,
 			signoutUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout'
 		},
+		auditLogDataModels: AUDIT_LOG_DATA_MODELS.split(',') || '',
 		azureLanguage: {
 			categories: AZURE_AI_LANGUAGE_CATEGORIES,
 			endpoint: AZURE_AI_LANGUAGE_ENDPOINT

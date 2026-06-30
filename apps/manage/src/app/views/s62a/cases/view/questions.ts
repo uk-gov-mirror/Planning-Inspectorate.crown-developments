@@ -65,7 +65,7 @@ import MultiConditionalNumericValidator from '@pins/crowndev-lib/forms/custom-co
 import UniqueListFieldValidator from '@pins/crowndev-lib/validators/unique-list-field-validator.ts';
 import { toIntOrNull } from '@pins/crowndev-lib/util/numbers.ts';
 import { escapeHtml } from '@pins/crowndev-lib/util/string.ts';
-import type { EntraGroupMembers } from '#util/entra-groups.ts';
+import type { EntraGroupMembers } from '@pins/crowndev-lib/util/entra-groups.ts';
 
 type ApplicantOrg = {
 	id: string;
@@ -835,14 +835,14 @@ export function getQuestions(
 				new RequiredValidator('Enter the cost of the press notice'),
 				new StringValidator({
 					regex: {
-						regex: '^[0-9]+(\\.[0-9]{1,2})?$',
-						regexMessage: 'Cost of press notice should include numbers only'
+						regex: '^(?!(?:.*\\d){9,})\\d+(?:\\.\\d{1,2})?$',
+						regexMessage: 'Cost of press notice must be 8 digits or less'
 					}
 				}),
 				new StringValidator({
 					regex: {
-						regex: '^(?!(?:.*\\d){9,})\\d+(?:\\.\\d{1,2})?$',
-						regexMessage: 'Cost of press notice must be 8 digits or less'
+						regex: '^[0-9]+(\\.[0-9]{1,2})?$',
+						regexMessage: 'Cost of press notice should include numbers only'
 					}
 				})
 			],

@@ -2,7 +2,7 @@ import { describe, it, mock, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Request, Response } from 'express';
 import { buildViewCaseHistory } from './controller.ts';
-import type { ManageService } from '#service';
+import type { CaseHistoryService } from './controller.ts';
 
 describe('buildViewCaseHistory', () => {
 	const mockLogger = {
@@ -12,7 +12,8 @@ describe('buildViewCaseHistory', () => {
 	};
 
 	const mockDb = {
-		crownDevelopment: { findUnique: mock.fn<(...args: unknown[]) => Promise<unknown>>() }
+		crownDevelopment: { findUnique: mock.fn<(...args: unknown[]) => Promise<unknown>>() },
+		s62aCase: { findUnique: mock.fn<(...args: unknown[]) => Promise<unknown>>() }
 	};
 
 	const mockAudit = {
@@ -45,15 +46,26 @@ describe('buildViewCaseHistory', () => {
 			...overrides
 		}) as unknown as Request;
 
-	const buildService = (overrides: Record<string, unknown> = {}) =>
-		({
-			db: mockDb,
+	const buildService = (overrides: Record<string, unknown> = {}) => {
+		// Create a fresh mockDb per service build
+		const defaultDb = {
+			crownDevelopment: {
+				findUnique: mock.fn<(...args: unknown[]) => Promise<unknown>>(() => Promise.resolve(null))
+			},
+			s62aCase: {
+				findUnique: mock.fn<(...args: unknown[]) => Promise<unknown>>(() => Promise.resolve(null))
+			}
+		};
+
+		return {
+			db: defaultDb,
 			entraGroupIds: {
 				caseOfficers: '123',
 				inspectors: '123'
 			},
 			audit: mockAudit,
 			logger: mockLogger,
+			auditLogDataModels: ['crownDevelopment', 's62aCase'], // Must be an array of strings
 			getEntraClient: () => ({
 				listAllGroupMembers: async () => [
 					{ id: 'user-1', displayName: 'Jane Smith' },
@@ -62,7 +74,8 @@ describe('buildViewCaseHistory', () => {
 			}),
 			authConfig: { groups: { applicationAccess: 'group-1' } },
 			...overrides
-		}) as unknown as ManageService;
+		} as unknown as CaseHistoryService;
+	};
 
 	// Narrows a recorded mock call's first argument to an expected shape.
 	const firstArg = <T>(call: { arguments: unknown[] }): T => call.arguments[0] as T;
@@ -94,7 +107,12 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve({ reference: 'REF-001' }));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.resolve({ reference: 'REF-001' })
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
 
 			const mockEvents = [
 				{
@@ -116,12 +134,12 @@ describe('buildViewCaseHistory', () => {
 			mockAudit.getAllForCase.mock.mockImplementation(() => Promise.resolve(mockEvents));
 			mockAudit.countForCase.mock.mockImplementation(() => Promise.resolve(2));
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
-			assert.strictEqual(mockDb.crownDevelopment.findUnique.mock.callCount(), 1);
+			assert.strictEqual((service.db as any).crownDevelopment.findUnique.mock.callCount(), 1);
 
 			const dbArgs = firstArg<{ where: { id: string }; select: { reference: boolean } }>(
-				mockDb.crownDevelopment.findUnique.mock.calls[0]
+				(service.db as any).crownDevelopment.findUnique.mock.calls[0]
 			);
 			assert.deepStrictEqual(dbArgs.where, { id: 'case-123' });
 			assert.ok(dbArgs.select.reference);
@@ -129,7 +147,7 @@ describe('buildViewCaseHistory', () => {
 			assert.strictEqual(res.render.mock.callCount(), 1);
 			const [viewPath, viewData] = renderArgs(res.render.mock.calls[0]);
 
-			assert.strictEqual(viewPath, 'views/cases/case-history/view.njk');
+			assert.strictEqual(viewPath, 'view.njk');
 			assert.strictEqual(viewData.pageHeading, 'View application history');
 			assert.strictEqual(viewData.reference, 'REF-001');
 			assert.strictEqual(viewData.backLinkUrl, '/cases/case-123');
@@ -142,7 +160,12 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve({ reference: 'REF-001' }));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.resolve({ reference: 'REF-001' })
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
 
 			mockAudit.getAllForCase.mock.mockImplementation(() =>
 				Promise.resolve([
@@ -157,7 +180,7 @@ describe('buildViewCaseHistory', () => {
 			);
 			mockAudit.countForCase.mock.mockImplementation(() => Promise.resolve(1));
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
 			const [, viewData] = renderArgs(res.render.mock.calls[0]);
 			const rows = viewData.rows as Array<{ user: string }>;
@@ -170,7 +193,12 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve({ reference: 'REF-001' }));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.resolve({ reference: 'REF-001' })
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
 
 			mockAudit.getAllForCase.mock.mockImplementation(() =>
 				Promise.resolve([
@@ -185,7 +213,7 @@ describe('buildViewCaseHistory', () => {
 			);
 			mockAudit.countForCase.mock.mockImplementation(() => Promise.resolve(1));
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
 			const [, viewData] = renderArgs(res.render.mock.calls[0]);
 			const rows = viewData.rows as Array<{ user: string }>;
@@ -198,9 +226,12 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve(null));
+			const service = buildService();
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve(null));
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
+
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
 			const historyCalls = res.render.mock.calls.filter(
 				(call) => (call.arguments as unknown[])[0] === 'views/cases/case-history/view.njk'
@@ -212,11 +243,18 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.reject(new Error('Connection refused')));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.reject(new Error('Connection refused'))
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() =>
+				Promise.reject(new Error('Connection refused'))
+			);
 
 			await assert.rejects(
 				async () => {
-					await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+					await buildViewCaseHistory(service)(req, runService(res), () => {});
 				},
 				{
 					message: 'Connection refused'
@@ -228,10 +266,15 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq();
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.reject(new Error('DB timeout')));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.reject(new Error('DB timeout'))
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.reject(new Error('DB timeout')));
 
 			await assert.rejects(async () => {
-				await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+				await buildViewCaseHistory(service)(req, runService(res), () => {});
 			});
 
 			assert.strictEqual(res.render.mock.callCount(), 0);
@@ -245,11 +288,16 @@ describe('buildViewCaseHistory', () => {
 			});
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve({ reference: 'REF-001' }));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.resolve({ reference: 'REF-001' })
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
 			mockAudit.getAllForCase.mock.mockImplementation(() => Promise.resolve([]));
 			mockAudit.countForCase.mock.mockImplementation(() => Promise.resolve(45));
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
 			assert.strictEqual(mockAudit.getAllForCase.mock.callCount(), 1);
 			const auditArgs = mockAudit.getAllForCase.mock.calls[0].arguments;
@@ -282,11 +330,17 @@ describe('buildViewCaseHistory', () => {
 			const req = mockReq({ query: {} });
 			const res = mockRes();
 
-			mockDb.crownDevelopment.findUnique.mock.mockImplementation(() => Promise.resolve({ reference: 'REF-001' }));
+			const service = buildService();
+
+			(service.db as any).crownDevelopment.findUnique.mock.mockImplementation(() =>
+				Promise.resolve({ reference: 'REF-001' })
+			);
+			(service.db as any).s62aCase.findUnique.mock.mockImplementation(() => Promise.resolve(null));
+
 			mockAudit.getAllForCase.mock.mockImplementation(() => Promise.resolve([]));
 			mockAudit.countForCase.mock.mockImplementation(() => Promise.resolve(5));
 
-			await buildViewCaseHistory(buildService())(req, runService(res), () => {});
+			await buildViewCaseHistory(service)(req, runService(res), () => {});
 
 			const auditArgs = mockAudit.getAllForCase.mock.calls[0].arguments as [string, { skip: number }];
 			const [, viewData] = renderArgs(res.render.mock.calls[0]);

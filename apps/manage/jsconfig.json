@@ -1,12 +1,12 @@
 {
 	"extends": "../../jsconfig.json",
-	"include": ["**/*.js", "**/*.d.ts"],
+	"include": ["**/*.js", "**/*.d.ts", "../../packages/lib/util/entra-groups.test.js", "src/app/service.js"],
 	"exclude": ["src/server/static", "scripts", "coverage"],
 	"files": [],
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"#service": ["./src/app/service.js"],
+			"#service": ["src/app/service.js"],
 			"#util/*": ["./src/util/*"]
 		}
 	}

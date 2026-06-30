@@ -11,7 +11,7 @@ import { crownDevelopmentToViewModel, mapNotes, type CrownDevelopmentViewModel }
 import { getQuestions } from './questions.ts';
 import { createJourney, JOURNEY_ID } from './journey.ts';
 import { isValidUuidFormat } from '@pins/crowndev-lib/util/uuid.ts';
-import { getEntraGroupMembers } from '#util/entra-groups.ts';
+import { getEntraGroupMembers } from '@pins/crowndev-lib/util/entra-groups.ts';
 import { isUnsafeObjectKey, clearSessionData, readSessionData } from '@pins/crowndev-lib/util/session.ts';
 import { caseReferenceToFolderName } from '@pins/crowndev-lib/util/sharepoint-path.js';
 import { maybeGetLinkedCaseLink } from '@pins/crowndev-lib/util/linked-case.ts';
@@ -309,6 +309,7 @@ export function buildGetJourneyMiddleware(service: ManageService, isQuestionView
 			res.locals.caseNotes = mappedNotes.caseNotes;
 			res.locals.allCaseNotesCount = crownDevelopment._count?.Notes ?? 0;
 		}
+
 		const lastModified = await audit.getLastModifiedInfo(id, groupMembers);
 		const overrides = {
 			isApplicationTypePlanningOrLbc: viewModel.typeId === APPLICATION_TYPE_ID.PLANNING_AND_LISTED_BUILDING_CONSENT,

@@ -9,7 +9,7 @@ import { createRoutes as createCaseUnpublishRoutes } from './unpublish/index.js'
 import { createRoutes as createRepsRoutes } from './manage-reps/index.js';
 import { createRoutes as createApplicationUpdatesRoutes } from './application-updates/index.js';
 import { buildUpdateCase } from './update-case.ts';
-import { createRoutes as createApplicationHistoryRoutes } from '../case-history/index.ts';
+import { createRoutes as createApplicationHistoryRoutes } from '@pins/crowndev-lib/case-history/index.ts';
 import { createRoutes as createApplicationNotesRoutes } from '../case-notes/index.ts';
 import {
 	buildGetJourneyResponseFromSession,

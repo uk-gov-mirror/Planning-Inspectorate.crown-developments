@@ -1,33 +1,65 @@
-import type { ManageService } from '#service';
 import { notFoundHandler } from '@pins/crowndev-lib/middleware/errors.ts';
 import type { AsyncRequestHandler } from '@pins/crowndev-lib/util/async-handler.ts';
 import { wrapPrismaError } from '@pins/crowndev-lib/util/database.ts';
-import { getEntraGroupMembers } from '#util/entra-groups.ts';
+import { getEntraGroupMembers } from '@pins/crowndev-lib/util/entra-groups.ts';
 import { createCaseHistoryViewModel } from './view-model.ts';
 import { getPaginationParams, createPaginationParams } from '@pins/crowndev-lib/views/pagination/pagination-utils.ts';
 import { getStringParam } from '@pins/crowndev-lib/util/params.ts';
 
-export function buildViewCaseHistory(service: ManageService): AsyncRequestHandler {
+import type { BaseConfig } from '@pins/crowndev-lib/app/config-types.d.ts';
+import type { AuditService } from '@pins/crowndev-lib/audit/index.js';
+import type { InitEntraClient } from '@pins/crowndev-lib/graph/types.js';
+import type { Logger } from 'pino';
+import type { initDatabaseClient } from '@pins/crowndev-database';
+
+export interface CaseHistoryService {
+	db: typeof initDatabaseClient;
+	config: BaseConfig;
+	logger: Logger;
+	audit: AuditService;
+	getEntraClient: InitEntraClient;
+	entraGroupIds: {
+		caseOfficers: string;
+		inspectors: string;
+	};
+	auditLogDataModels: string[];
+}
+
+interface CaseDelegate {
+	findUnique(args: { select: { reference: true }; where: { id: string } }): Promise<{ reference: string } | null>;
+}
+
+export function buildViewCaseHistory(service: CaseHistoryService): AsyncRequestHandler {
 	const { db, audit, logger, getEntraClient } = service;
 	const groupIds = service.entraGroupIds;
+
+	const [crownDb, s62aDb] = service.auditLogDataModels;
 
 	return async (req, res) => {
 		const id = getStringParam(req.params, 'id');
 
 		let caseRow;
 		try {
-			caseRow = await db.crownDevelopment.findUnique({
-				select: {
-					reference: true
-				},
-				where: { id }
-			});
+			const dbModels = db as unknown as Record<string, CaseDelegate>;
+
+			const [crownDev, s62aCase] = await Promise.all([
+				dbModels[crownDb].findUnique({
+					select: { reference: true },
+					where: { id }
+				}),
+				dbModels[s62aDb].findUnique({
+					select: { reference: true },
+					where: { id }
+				})
+			]);
+
+			caseRow = crownDev ?? s62aCase;
 		} catch (error: unknown) {
 			wrapPrismaError({
 				error,
 				logger,
 				message: 'fetching case for history',
-				logParams: {}
+				logParams: { id }
 			});
 		}
 
@@ -61,7 +93,7 @@ export function buildViewCaseHistory(service: ManageService): AsyncRequestHandle
 
 		const rows = createCaseHistoryViewModel(eventsWithUserNames);
 
-		return res.render('views/cases/case-history/view.njk', {
+		return res.render('view.njk', {
 			pageHeading: 'View application history',
 			reference: caseRow.reference,
 			backLinkUrl: `/cases/${id}`,

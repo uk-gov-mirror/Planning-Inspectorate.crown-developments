@@ -15,6 +15,7 @@ interface Config {
 		redirectUri: string;
 		signoutUrl: string;
 	};
+	auditLogDataModels: string[];
 	azureLanguage: {
 		categories: string; // CSV string
 		endpoint: string;
