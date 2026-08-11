@@ -85,3 +85,16 @@ export function resolveTemplate(action: AuditAction, metadata?: Record<string, u
 		return match;
 	});
 }
+/**
+ * Determines the appropriate audit action for a field change.
+ *
+ * @param oldValue  - formatted previous value ('-' means was empty)
+ * @param newValue  - formatted new value ('-' means now empty)
+ * @param isLongField - whether the field should use the long-text action
+ */
+export function resolveAuditAction(oldValue: string, newValue: string, isLongField: boolean = false): AuditAction {
+	if (newValue === '-') return AUDIT_ACTIONS.FIELD_CLEARED;
+	if (oldValue === '-') return AUDIT_ACTIONS.FIELD_SET;
+	if (isLongField) return AUDIT_ACTIONS.FIELD_UPDATED_LONG;
+	return AUDIT_ACTIONS.FIELD_UPDATED;
+}

@@ -32,9 +32,10 @@ import type {
 import type { ErrorSummaryItem } from '@pins/crowndev-lib/util/types.ts';
 import type { Prisma } from '@pins/crowndev-database/src/client/client.ts';
 import { getStringParam } from '@pins/crowndev-lib/util/params.ts';
-import { AUDIT_ACTIONS, type AuditService, type AuditEntry, type AuditAction } from '../../../audit/index.ts';
+import { AUDIT_ACTIONS, type AuditService, type AuditEntry } from '../../../audit/index.ts';
 import { resolveFieldValues, getFieldDisplayName } from '../../../audit/resolvers/index.ts';
 import type { Logger } from 'pino';
+import { resolveAuditAction } from '../../../audit/actions.ts';
 
 function typedObjectKeys<T extends object>(obj: T): Array<keyof T> {
 	return Object.keys(obj) as Array<keyof T>;
@@ -107,12 +108,15 @@ const AUDITABLE_SCALAR_FIELDS = new Set([
 	'cilLiable',
 	'bngExempt',
 	'hasCostsApplications',
-
+	'costsApplicationsComment',
 	// Monetary fields
 	'cilAmount',
 	'applicationFee',
 	'applicationFeeRefundAmount'
 ]);
+
+/** * Long-text fields that render with expandable old/new value details * instead of inline audit text. */
+const LONG_AUDIT_FIELDS = new Set(['description', 'costsApplicationsComment']);
 
 type ErrorWithSummary = Error & { errorSummary: ErrorSummaryItem[] };
 
@@ -491,20 +495,7 @@ async function recordAuditEntries(
 				continue;
 			}
 
-			let action: AuditAction;
-
-			if (oldValue === '-') {
-				action = AUDIT_ACTIONS.FIELD_SET;
-			} else if (newValue === '-') {
-				action = AUDIT_ACTIONS.FIELD_CLEARED;
-			} else {
-				action = AUDIT_ACTIONS.FIELD_UPDATED;
-			}
-
-			const LONG_AUDIT_FIELDS = new Set(['description', 'healthAndSafetyIssue']);
-			if (action === AUDIT_ACTIONS.FIELD_UPDATED && LONG_AUDIT_FIELDS.has(fieldName)) {
-				action = AUDIT_ACTIONS.FIELD_UPDATED_LONG;
-			}
+			const action = resolveAuditAction(oldValue, newValue, LONG_AUDIT_FIELDS.has(fieldName));
 
 			allAuditEntries.push({
 				caseId,
@@ -513,7 +504,8 @@ async function recordAuditEntries(
 				metadata: {
 					fieldName: getFieldDisplayName(fieldName),
 					oldValue,
-					newValue
+					newValue,
+					...(action === AUDIT_ACTIONS.FIELD_UPDATED_LONG ? { isLong: true } : {})
 				}
 			});
 		}

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTemplate, AUDIT_ACTIONS } from './actions.ts';
+import { resolveTemplate, resolveAuditAction, AUDIT_ACTIONS, AUDIT_TEMPLATES } from './actions.ts';
 
 describe('resolveTemplate', () => {
 	it('should return template as-is when no metadata is provided', () => {
@@ -73,6 +73,20 @@ describe('resolveTemplate', () => {
 			assert.strictEqual(result, 'Hearing venue was updated from Town Hall to City Hall');
 		});
 	});
+
+	describe('FIELD_UPDATED_LONG action', () => {
+		it('should resolve FIELD_UPDATED_LONG template with fieldName', () => {
+			const result = resolveTemplate(AUDIT_ACTIONS.FIELD_UPDATED_LONG, {
+				fieldName: 'Development description'
+			});
+			assert.strictEqual(result, 'Development description was updated');
+		});
+
+		it('should leave fieldName placeholder when metadata is missing', () => {
+			const result = resolveTemplate(AUDIT_ACTIONS.FIELD_UPDATED_LONG);
+			assert.strictEqual(result, '{fieldName} was updated');
+		});
+	});
 });
 
 describe('AUDIT_ACTIONS', () => {
@@ -91,13 +105,39 @@ describe('AUDIT_ACTIONS', () => {
 	it('should have FIELD_UPDATED_LONG action', () => {
 		assert.strictEqual(AUDIT_ACTIONS.FIELD_UPDATED_LONG, 'FIELD_UPDATED_LONG');
 	});
+});
 
-	describe('FIELD_UPDATED_LONG action', () => {
-		it('should resolve FIELD_UPDATED_LONG template with fieldName', () => {
-			const result = resolveTemplate(AUDIT_ACTIONS.FIELD_UPDATED_LONG, {
-				fieldName: 'Development description'
-			});
-			assert.strictEqual(result, 'Development description was updated');
-		});
+describe('AUDIT_TEMPLATES', () => {
+	it('should include FIELD_UPDATED_LONG template', () => {
+		assert.strictEqual(AUDIT_TEMPLATES[AUDIT_ACTIONS.FIELD_UPDATED_LONG], '{fieldName} was updated');
+	});
+});
+describe('resolveAuditAction', () => {
+	it('should return FIELD_CLEARED when newValue is "-"', () => {
+		assert.strictEqual(resolveAuditAction('Some value', '-'), AUDIT_ACTIONS.FIELD_CLEARED);
+	});
+
+	it('should return FIELD_SET when oldValue is "-"', () => {
+		assert.strictEqual(resolveAuditAction('-', 'Some value'), AUDIT_ACTIONS.FIELD_SET);
+	});
+
+	it('should return FIELD_UPDATED_LONG when both values exist and isLongField is true', () => {
+		assert.strictEqual(resolveAuditAction('Old text', 'New text', true), AUDIT_ACTIONS.FIELD_UPDATED_LONG);
+	});
+
+	it('should return FIELD_UPDATED when both values exist and isLongField is false', () => {
+		assert.strictEqual(resolveAuditAction('Old value', 'New value', false), AUDIT_ACTIONS.FIELD_UPDATED);
+	});
+
+	it('should default isLongField to false', () => {
+		assert.strictEqual(resolveAuditAction('Old value', 'New value'), AUDIT_ACTIONS.FIELD_UPDATED);
+	});
+
+	it('should prioritise FIELD_CLEARED over isLongField when newValue is "-"', () => {
+		assert.strictEqual(resolveAuditAction('Some text', '-', true), AUDIT_ACTIONS.FIELD_CLEARED);
+	});
+
+	it('should prioritise FIELD_SET over isLongField when oldValue is "-"', () => {
+		assert.strictEqual(resolveAuditAction('-', 'Some text', true), AUDIT_ACTIONS.FIELD_SET);
 	});
 });
