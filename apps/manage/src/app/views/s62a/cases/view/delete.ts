@@ -9,7 +9,11 @@ export const questionConfig: Record<string, { fieldName: string; successMessage:
 	'check-applicant-details': { fieldName: 'manageApplicantOrganisations', successMessage: 'Organisation removed' },
 	'check-additional-contact-details': { fieldName: 'manageAdditionalContacts', successMessage: 'Contact removed' },
 	'check-case-team-inspectors': { fieldName: 'manageCaseTeamInspectors', successMessage: 'Inspector removed' },
-	'check-waste-types': { fieldName: 'manageWasteTypes', successMessage: 'Waste type removed' }
+	'check-waste-types': { fieldName: 'manageWasteTypes', successMessage: 'Waste type removed' },
+	// Existing and proposed housing both use the question url 'housing', so these
+	// are keyed by section and url together.
+	'existing/housing': { fieldName: 'manageExistingHousing', successMessage: 'Existing housing entry removed' },
+	'proposed/housing': { fieldName: 'manageProposedHousing', successMessage: 'Proposed housing entry removed' }
 };
 
 /**
@@ -27,9 +31,9 @@ export function buildDeleteS62aManageListItemOnConfirmRemove(service: ManageServ
 
 	return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 		try {
-			const { manageListAction, manageListItemId, manageListQuestion, question, id } = getOptionalStringParams(
+			const { manageListAction, manageListItemId, manageListQuestion, question, section, id } = getOptionalStringParams(
 				req.params,
-				['manageListAction', 'manageListItemId', 'manageListQuestion', 'question', 'id']
+				['manageListAction', 'manageListItemId', 'manageListQuestion', 'question', 'section', 'id']
 			);
 
 			if (manageListAction !== 'remove' || manageListQuestion !== 'confirm' || !manageListItemId || !id || !question) {
@@ -37,7 +41,10 @@ export function buildDeleteS62aManageListItemOnConfirmRemove(service: ManageServ
 				return;
 			}
 
-			const fieldName = questionUrlToFieldName[question] || question;
+			// Prefer the section-qualified key so two manage lists can share a question
+			// url, falling back to the url alone for every other list.
+			const fieldName =
+				(section && questionUrlToFieldName[`${section}/${question}`]) || questionUrlToFieldName[question] || question;
 
 			service.logger.info({ id, manageListQuestion, manageListItemId, fieldName }, 'Deleting manage-list item from DB');
 
@@ -59,6 +66,10 @@ export function buildDeleteS62aManageListItemOnConfirmRemove(service: ManageServ
 					break;
 				case 'manageWasteTypes':
 					await deleter.deleteWasteType(id, manageListItemId);
+					break;
+				case 'manageExistingHousing':
+				case 'manageProposedHousing':
+					await deleter.deleteResidentialHousing(id, manageListItemId);
 					break;
 				default:
 					service.logger.warn(

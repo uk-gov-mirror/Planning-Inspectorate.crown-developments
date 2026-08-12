@@ -17,6 +17,7 @@ import TableManageListQuestion from './manage-list/table/question.ts';
 import DefinedColumnsTableQuestion, {
 	type TableColumn
 } from './manage-list/table/defined-columns-list-table/question.ts';
+import CardManageListQuestion, { type CardFormatContext, type CardRow } from './manage-list/card/question.ts';
 
 type CustomComponentTypes = (typeof CUSTOM_COMPONENTS)[keyof typeof CUSTOM_COMPONENTS];
 
@@ -146,6 +147,12 @@ type DefinedColumnsTableQuestionProps = Omit<TableManageListQuestionProps, 'type
 	columns: TableColumn[];
 };
 
+type CardManageListQuestionProps = Omit<TableManageListQuestionProps, 'type'> & {
+	type: typeof CUSTOM_COMPONENTS.CARD_MANAGE_LIST;
+	cardTitle?: (item: Record<string, unknown>, params: CardFormatContext) => string;
+	rows?: CardRow[];
+};
+
 export type CrownQuestionProps =
 	| QuestionProps
 	| RepresentationAttachmentsQuestionProps
@@ -157,7 +164,8 @@ export type CrownQuestionProps =
 	| CustomMultiFieldInputQuestionProps
 	| DistressingContentQuestionProps
 	| TableManageListQuestionProps
-	| DefinedColumnsTableQuestionProps;
+	| DefinedColumnsTableQuestionProps
+	| CardManageListQuestionProps;
 
 export const CUSTOM_COMPONENTS = Object.freeze({
 	REPRESENTATION_ATTACHMENTS: 'representation-attachments',
@@ -172,7 +180,8 @@ export const CUSTOM_COMPONENTS = Object.freeze({
 	CONDITIONAL_RADIO: 'conditional-radio',
 	MULTI_CONDITIONAL_RADIO: 'multi-conditional-radio',
 	MANAGE_LIST_TABLE: 'manage-list-table',
-	DEFINED_COLUMNS_TABLE: 'defined-columns-table'
+	DEFINED_COLUMNS_TABLE: 'defined-columns-table',
+	CARD_MANAGE_LIST: 'card-manage-list'
 } as const);
 
 export const CUSTOM_COMPONENT_CLASSES = Object.freeze({
@@ -188,5 +197,6 @@ export const CUSTOM_COMPONENT_CLASSES = Object.freeze({
 	[CUSTOM_COMPONENTS.CONDITIONAL_RADIO]: ConditionalRadioQuestion,
 	[CUSTOM_COMPONENTS.MULTI_CONDITIONAL_RADIO]: MultiConditionalRadioQuestion,
 	[CUSTOM_COMPONENTS.MANAGE_LIST_TABLE]: TableManageListQuestion,
-	[CUSTOM_COMPONENTS.DEFINED_COLUMNS_TABLE]: DefinedColumnsTableQuestion
+	[CUSTOM_COMPONENTS.DEFINED_COLUMNS_TABLE]: DefinedColumnsTableQuestion,
+	[CUSTOM_COMPONENTS.CARD_MANAGE_LIST]: CardManageListQuestion
 } as const);
