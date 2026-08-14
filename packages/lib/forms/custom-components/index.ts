@@ -17,6 +17,7 @@ import TableManageListQuestion from './manage-list/table/question.ts';
 import DefinedColumnsTableQuestion, {
 	type TableColumn
 } from './manage-list/table/defined-columns-list-table/question.ts';
+import MultiFileUploadQuestion from './multi-file-uploader/question.ts';
 
 type CustomComponentTypes = (typeof CUSTOM_COMPONENTS)[keyof typeof CUSTOM_COMPONENTS];
 
@@ -146,6 +147,19 @@ type DefinedColumnsTableQuestionProps = Omit<TableManageListQuestionProps, 'type
 	columns: TableColumn[];
 };
 
+export type MultiFileUploaderQuestionProps = CrownCommonQuestionProps & {
+	type: typeof CUSTOM_COMPONENTS.MULTI_FILE_UPLOADER;
+	dataUploadUrl: string;
+	dataDeleteUrl: string;
+	allowedFileExtensions: string[];
+	allowedMimeTypes: string[];
+	maxFileSizeValue: number;
+	maxFileSizeString: string;
+	preUploadHtml?: string;
+	postUploadHtml?: string;
+	showUploadWarning?: boolean;
+};
+
 export type CrownQuestionProps =
 	| QuestionProps
 	| RepresentationAttachmentsQuestionProps
@@ -157,7 +171,8 @@ export type CrownQuestionProps =
 	| CustomMultiFieldInputQuestionProps
 	| DistressingContentQuestionProps
 	| TableManageListQuestionProps
-	| DefinedColumnsTableQuestionProps;
+	| DefinedColumnsTableQuestionProps
+	| MultiFileUploaderQuestionProps;
 
 export const CUSTOM_COMPONENTS = Object.freeze({
 	REPRESENTATION_ATTACHMENTS: 'representation-attachments',
@@ -172,7 +187,8 @@ export const CUSTOM_COMPONENTS = Object.freeze({
 	CONDITIONAL_RADIO: 'conditional-radio',
 	MULTI_CONDITIONAL_RADIO: 'multi-conditional-radio',
 	MANAGE_LIST_TABLE: 'manage-list-table',
-	DEFINED_COLUMNS_TABLE: 'defined-columns-table'
+	DEFINED_COLUMNS_TABLE: 'defined-columns-table',
+	MULTI_FILE_UPLOADER: 'multi-file-uploader'
 } as const);
 
 export const CUSTOM_COMPONENT_CLASSES = Object.freeze({
@@ -188,5 +204,6 @@ export const CUSTOM_COMPONENT_CLASSES = Object.freeze({
 	[CUSTOM_COMPONENTS.CONDITIONAL_RADIO]: ConditionalRadioQuestion,
 	[CUSTOM_COMPONENTS.MULTI_CONDITIONAL_RADIO]: MultiConditionalRadioQuestion,
 	[CUSTOM_COMPONENTS.MANAGE_LIST_TABLE]: TableManageListQuestion,
-	[CUSTOM_COMPONENTS.DEFINED_COLUMNS_TABLE]: DefinedColumnsTableQuestion
+	[CUSTOM_COMPONENTS.DEFINED_COLUMNS_TABLE]: DefinedColumnsTableQuestion,
+	[CUSTOM_COMPONENTS.MULTI_FILE_UPLOADER]: MultiFileUploadQuestion
 } as const);
