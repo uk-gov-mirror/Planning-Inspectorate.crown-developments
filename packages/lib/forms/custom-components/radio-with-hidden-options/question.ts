@@ -1,12 +1,17 @@
-import { RadioQuestion, type Option, OptionsQuestion, type Journey } from '@planning-inspectorate/dynamic-forms';
+import {
+	RadioQuestion,
+	OptionsQuestion,
+	type Journey,
+	type SelectableOption
+} from '@planning-inspectorate/dynamic-forms';
 import type { CrownCommonQuestionProps } from '../index.ts';
 
 export type HiddenRadioQuestionProps = CrownCommonQuestionProps & {
-	options: Option[];
+	options: SelectableOption[];
 	viewFolder: string | undefined;
 	label: string | undefined;
 	legend: string | undefined;
-	hiddenOptions: Option[];
+	hiddenOptions: SelectableOption[];
 };
 
 /**
@@ -21,7 +26,7 @@ export type HiddenRadioQuestionProps = CrownCommonQuestionProps & {
  * passed as a hidden option but not a real option.
  */
 export default class HiddenRadioQuestion extends RadioQuestion {
-	hiddenOptions: Option[];
+	hiddenOptions: SelectableOption[];
 
 	constructor(params: HiddenRadioQuestionProps) {
 		const superParams = {
@@ -66,8 +71,8 @@ export default class HiddenRadioQuestion extends RadioQuestion {
 	/**
 	 * Combines real values with legacy ones to be viewable.
 	 */
-	getOptionByValue(value: string) {
+	getOptionByValue(value: string): SelectableOption | undefined {
 		const allOptions = [...this.options, ...this.hiddenOptions];
-		return allOptions.find((option) => option.value === value);
+		return allOptions.find((option): option is SelectableOption => 'value' in option && option.value === value);
 	}
 }

@@ -10,7 +10,8 @@ import { HIDDEN_TYPE } from '@pins/crowndev-lib/forms/custom-components/custom-m
 
 /**
  * @typedef {import('@pins/crowndev-lib/forms/custom-components/custom-multi-field-input/question.js').CustomMultiFieldInputQuestionProps} CustomMultiFieldInputQuestionProps
- * @typedef {import('@planning-inspectorate/dynamic-forms/src/questions/question-props.js').QuestionProps} QuestionProps
+ * @typedef {import('@planning-inspectorate/dynamic-forms').QuestionProps} QuestionProps
+ * @typedef {import('@planning-inspectorate/dynamic-forms').SelectableOption} SelectableOption
  */
 
 /**
@@ -18,7 +19,7 @@ import { HIDDEN_TYPE } from '@pins/crowndev-lib/forms/custom-components/custom-m
  * @param {Object} opts
  * @param {string} opts.prefix
  * @param {string} opts.title This should be uncapitalised (unless it's a proper noun)
- * @param {Array<{text: string, value: string}>|null} opts.organisationOptions
+ * @param {SelectableOption[]|null} opts.organisationOptions
  * @returns {Record<string, CustomMultiFieldInputQuestionProps>}
  */
 export function multiContactQuestions({ prefix, title, organisationOptions }) {

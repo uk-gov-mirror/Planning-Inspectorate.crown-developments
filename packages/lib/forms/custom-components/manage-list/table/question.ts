@@ -1,15 +1,22 @@
 import { DateQuestion, ManageListQuestion } from '@planning-inspectorate/dynamic-forms';
-import type { CommonQuestionParams } from '@planning-inspectorate/dynamic-forms';
-import type { Journey } from '@planning-inspectorate/dynamic-forms/src/journey/journey.js';
-import type { JourneyResponse } from '@planning-inspectorate/dynamic-forms/src/journey/journey-response.js';
-import type { Section } from '@planning-inspectorate/dynamic-forms/src/section.js';
-import type { Question, QuestionViewModel } from '@planning-inspectorate/dynamic-forms/src/questions/question.js';
+import type {
+	ActionView,
+	CommonQuestionParams,
+	Journey,
+	JourneyResponse,
+	Section,
+	Question,
+	QuestionViewModel
+} from '@planning-inspectorate/dynamic-forms';
 import nunjucks from 'nunjucks';
 import type { Request } from 'express';
 import type { TableHeadCell, TableManageListQuestionParameters, TableRowCell } from './types.ts';
 
-type TableQuestionViewData = {
-	value?: Record<string, unknown>[];
+export type TableQuestionViewData = {
+	value: Record<string, unknown>[];
+	question: string;
+	fieldName: string;
+	pageTitle: string;
 	firstQuestionUrl?: string;
 	tableHead?: TableHeadCell[];
 	tableRows?: TableRowCell[][];
@@ -94,7 +101,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	/**
 	 * Override to prepare table data (heads and rows)
 	 */
-	override addCustomDataToViewModel(viewModel: QuestionViewModel): void {
+	override addCustomDataToViewModel(viewModel: QuestionViewModel<TableQuestionViewData>): void {
 		if (!this.section) {
 			throw new Error('Section not set for TableManageListQuestion');
 		}
@@ -103,8 +110,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 
 		this.addButtonText(viewModel);
 
-		// viewModel.question is typed `any` upstream
-		const question = viewModel.question as TableQuestionViewData;
+		const question = viewModel.question;
 
 		question.tableHead = this.createHeaders();
 		question.tableRows = this.createRows(viewModel);
@@ -119,7 +125,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	 * At some point we may want to move this into the instantiation of the
 	 * classes so each one can have its own button text.
 	 */
-	private addButtonText(viewModel: QuestionViewModel): void {
+	private addButtonText(viewModel: QuestionViewModel<TableQuestionViewData>): void {
 		viewModel.continueButtonText = this.viewData?.continueOnly ? 'Continue' : 'Save and continue';
 		viewModel.addMoreButtonText = 'Add details';
 		viewModel.cancelButtonText = 'Cancel';
@@ -128,8 +134,8 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	/**
 	 * Creates the table rows
 	 */
-	private createRows(viewModel: QuestionViewModel): TableRowCell[][] {
-		const question = viewModel.question as TableQuestionViewData;
+	private createRows(viewModel: QuestionViewModel<TableQuestionViewData>): TableRowCell[][] {
+		const question = viewModel.question;
 		const answers = question.value ?? [];
 
 		return answers.map((item) => this.createRow(viewModel, item));
@@ -138,7 +144,10 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	/**
 	 * Creates a table row based on the questions asked
 	 */
-	protected createRow(viewModel: QuestionViewModel, item: Record<string, unknown>): TableRowCell[] {
+	protected createRow(
+		viewModel: QuestionViewModel<TableQuestionViewData>,
+		item: Record<string, unknown>
+	): TableRowCell[] {
 		const questions = this.section?.questions ?? [];
 
 		const cells: TableRowCell[] = questions.map((question: Question) => this.createCell(question, item));
@@ -152,7 +161,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	 * Creates the sortable table headers based on the questions asked
 	 */
 	createHeaders(): TableHeadCell[] {
-		const questions = (this.section?.questions ?? []) as Question[];
+		const questions = this.section?.questions ?? [];
 
 		const headers: TableHeadCell[] = questions.map((question) => {
 			// viewData is typed `any` upstream
@@ -203,9 +212,9 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	/**
 	 * Generates the HTML for the actions cell containing the change and remove links
 	 */
-	generateActionsHtml(viewModel: QuestionViewModel, item: Record<string, unknown>): string {
-		const question = viewModel.question as TableQuestionViewData;
-		const util = viewModel.util as { trimTrailingSlash: (url: string) => string };
+	generateActionsHtml(viewModel: QuestionViewModel<TableQuestionViewData>, item: Record<string, unknown>): string {
+		const question = viewModel.question;
+		const util = viewModel.util;
 		const originalUrl = viewModel.originalUrl as string;
 
 		const originalUrlTrimmed = util.trimTrailingSlash(originalUrl);
@@ -242,7 +251,11 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	 * Overrides parent. Behaves similarly, but passes a limit into the template
 	 * so the tab summary can hide and show items behind a toggle.
 	 */
-	formatAnswerForSummary(sectionSegment: string, journey: Journey, answer: unknown) {
+	formatAnswerForSummary(
+		sectionSegment: string,
+		journey: Journey,
+		answer: unknown
+	): ReturnType<ManageListQuestion['formatAnswerForSummary']> {
 		const items = Array.isArray(answer) ? (answer as Record<string, unknown>[]) : null;
 
 		let formattedAnswer = this.notStartedText || 'Not started';
@@ -264,7 +277,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 			{
 				key: this.title ?? this.question,
 				value: formattedAnswer,
-				action: this.getAction(sectionSegment, journey, answer) as never
+				action: this.getAction(sectionSegment, journey, answer)
 			}
 		];
 	}
@@ -298,7 +311,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	 * called with a JourneyResponse at runtime. Cast so the call typechecks.
 	 */
 	protected shouldDisplayQuestion(question: Question, answers: Record<string, unknown>): boolean {
-		const shouldDisplay = question.shouldDisplay as ((response: JourneyResponse) => boolean) | undefined;
+		const shouldDisplay = question.shouldDisplay;
 
 		if (!shouldDisplay) {
 			return true;
@@ -330,15 +343,12 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	/**
 	 * For an empty list, defer to the parent with null so the correct
 	 * "not started" text and add link are shown.
-	 *
-	 * TODO: PEAS-400 - should return ActionView | ActionView[] | undefined, but
-	 * that type does not resolve from the shipped declarations.
 	 */
-	getAction(sectionSegment: string, journey: Journey, answer: unknown): unknown {
+	getAction(sectionSegment: string, journey: Journey, answer: unknown): ActionView | ActionView[] | undefined {
 		if (Array.isArray(answer) && !answer.length) {
-			return super.getAction(sectionSegment, journey, null) as unknown;
+			return super.getAction(sectionSegment, journey, null);
 		}
 
-		return super.getAction(sectionSegment, journey, answer) as unknown;
+		return super.getAction(sectionSegment, journey, answer);
 	}
 }
