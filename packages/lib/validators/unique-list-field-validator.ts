@@ -9,6 +9,10 @@ export interface UniqueListFieldValidatorParams {
 	buildErrorMessage: (displayName: string) => string;
 	/** Resolves a stored value to something readable */
 	displayNameFor?: (value: string) => string;
+	/** Extra item fields that must also match for a duplicate, read from the item being edited */
+	alsoMatchOn?: string[];
+	/** Message when alsoMatchOn is set and the value alone doesn't identify the clash */
+	buildCombinationErrorMessage?: (item: Record<string, unknown>, value: string) => string;
 }
 
 /**
@@ -21,12 +25,22 @@ export default class UniqueListFieldValidator extends BaseValidator {
 	private listFieldName: string;
 	private buildErrorMessage: (displayName: string) => string;
 	private displayNameFor: (value: string) => string;
+	private alsoMatchOn: string[];
+	private buildCombinationErrorMessage?: (item: Record<string, unknown>, value: string) => string;
 
-	constructor({ listFieldName, buildErrorMessage, displayNameFor }: UniqueListFieldValidatorParams) {
+	constructor({
+		listFieldName,
+		buildErrorMessage,
+		displayNameFor,
+		alsoMatchOn,
+		buildCombinationErrorMessage
+	}: UniqueListFieldValidatorParams) {
 		super();
 		this.listFieldName = listFieldName;
 		this.buildErrorMessage = buildErrorMessage;
 		this.displayNameFor = displayNameFor ?? ((value) => value);
+		this.alsoMatchOn = alsoMatchOn ?? [];
+		this.buildCombinationErrorMessage = buildCombinationErrorMessage;
 	}
 
 	validate(questionObj: Question) {
@@ -46,11 +60,26 @@ export default class UniqueListFieldValidator extends BaseValidator {
 
 			// The item being added or edited is already in the list, so skip it
 			const currentItemId = typedReq.params?.manageListItemId;
+			const currentItem = items.find((item) => item.id === currentItemId) ?? {};
 
-			const isDuplicate = items.some((item) => item.id !== currentItemId && item[questionObj.fieldName] === value);
+			const isDuplicate = items.some((item) => {
+				if (item.id === currentItemId) {
+					return false;
+				}
+
+				if (item[questionObj.fieldName] !== value) {
+					return false;
+				}
+
+				return this.alsoMatchOn.every((fieldName) => item[fieldName] === currentItem[fieldName]);
+			});
 
 			if (isDuplicate) {
-				throw new Error(this.buildErrorMessage(this.displayNameFor(value)));
+				throw new Error(
+					this.buildCombinationErrorMessage
+						? this.buildCombinationErrorMessage(currentItem, value)
+						: this.buildErrorMessage(this.displayNameFor(value))
+				);
 			}
 
 			return true;

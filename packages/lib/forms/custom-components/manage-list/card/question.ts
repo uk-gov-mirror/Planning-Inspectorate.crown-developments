@@ -24,6 +24,8 @@ export type CardManageListQuestionParams = TableManageListQuestionParameters &
 		cardTitle?: (item: Record<string, unknown>, params: CardFormatContext) => string;
 		/** Rows inside each card. Defaults to one row per sub-question. */
 		rows?: CardRow[];
+		/** Orders the cards. Applied on every render, so session items sort too. */
+		sortItems?: (a: Record<string, unknown>, b: Record<string, unknown>) => number;
 	};
 
 interface CardViewData {
@@ -38,11 +40,13 @@ interface CardViewData {
 export default class CardManageListQuestion extends TableManageListQuestion {
 	cardTitle?: (item: Record<string, unknown>, params: CardFormatContext) => string;
 	rows: CardRow[];
+	sortItems?: (a: Record<string, unknown>, b: Record<string, unknown>) => number;
 
 	constructor(params: CardManageListQuestionParams) {
 		super(params);
 		this.cardTitle = params.cardTitle;
 		this.rows = params.rows ?? [];
+		this.sortItems = params.sortItems;
 		this.viewFolder = 'custom-components/manage-list/card';
 	}
 
@@ -50,7 +54,12 @@ export default class CardManageListQuestion extends TableManageListQuestion {
 		super.addCustomDataToViewModel(viewModel);
 
 		const question = viewModel.question as CardViewData;
-		const items = question.value ?? [];
+		const value = question.value ?? [];
+
+		// The DB query is ordered, but an entry added this session is appended in
+		// insertion order. Sorting a copy keeps the cards grouped without
+		// reordering the array that gets saved.
+		const items = this.sortItems ? [...value].sort(this.sortItems) : value;
 
 		question.cards = items.map((item, index) => ({
 			id: typeof item.id === 'string' ? item.id : '',
