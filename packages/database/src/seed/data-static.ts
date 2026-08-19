@@ -393,7 +393,8 @@ export const REPRESENTATION_STATUS = [
 export const REPRESENTED_TYPE_ID = Object.freeze({
 	PERSON: 'person',
 	ORGANISATION: 'organisation',
-	ORG_NOT_WORK_FOR: 'household'
+	ORG_NOT_WORK_FOR: 'household',
+	GROUP: 'group'
 } as const);
 
 export const REPRESENTED_TYPE = [
@@ -408,6 +409,10 @@ export const REPRESENTED_TYPE = [
 	{
 		id: REPRESENTED_TYPE_ID.ORG_NOT_WORK_FOR,
 		displayName: 'An organisation or charity I do not work or volunteer for'
+	},
+	{
+		id: REPRESENTED_TYPE_ID.GROUP,
+		displayName: 'A group of people'
 	}
 ] as const satisfies readonly Prisma.RepresentedTypeCreateInput[];
 

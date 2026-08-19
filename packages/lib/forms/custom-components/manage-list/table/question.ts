@@ -130,7 +130,7 @@ export default class TableManageListQuestion extends ManageListQuestion {
 	 */
 	private createRows(viewModel: QuestionViewModel): TableRowCell[][] {
 		const question = viewModel.question as TableQuestionViewData;
-		const answers = question.value ?? [];
+		const answers = question.value || [];
 
 		return answers.map((item) => this.createRow(viewModel, item));
 	}
