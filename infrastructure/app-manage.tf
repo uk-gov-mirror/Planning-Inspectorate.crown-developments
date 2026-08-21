@@ -70,8 +70,10 @@ module "app_manage" {
     SQL_CONNECTION_STRING = local.key_vault_refs["sql-app-connection-string"]
 
     # sessions
-    REDIS_CONNECTION_STRING = local.key_vault_refs["redis-connection-string"]
-    SESSION_SECRET          = local.key_vault_refs["session-secret-manage"]
+    REDIS_CONNECTION_STRING  = local.key_vault_refs["redis-connection-string"]
+    SESSION_SECRET           = local.key_vault_refs["session-secret-manage"]
+    SESSION_SECRET_PRIMARY   = time_rotating.manage_session_secret_a.unix > time_rotating.manage_session_secret_b.unix ? local.key_vault_refs["manage_session_secret_a"] : local.key_vault_refs["manage_session_secret_b"]
+    SESSION_SECRET_SECONDARY = time_rotating.manage_session_secret_a.unix > time_rotating.manage_session_secret_b.unix ? local.key_vault_refs["manage_session_secret_b"] : local.key_vault_refs["manage_session_secret_a"]
 
     #Auth
     MICROSOFT_PROVIDER_AUTHENTICATION_SECRET = local.key_vault_refs["microsoft-provider-authentication-secret"]
@@ -125,13 +127,81 @@ resource "azurerm_role_assignment" "app_manage_staging_secrets_user" {
 }
 
 ## sessions
+#https://2mas.github.io/blog/rotating-azure-app-registration-secrets-with-terraform/
+# Two rotators, offset by half of the rotation period
+resource "time_rotating" "manage_session_secret_a" {
+  rotation_months = 6
+}
+
+resource "time_rotating" "manage_session_secret_b" {
+  rfc3339         = timeadd(time_rotating.manage_session_secret_a.rfc3339, "2160h") # + 3 months
+  rotation_months = 6
+
+  lifecycle {
+    ignore_changes = [rfc3339]
+  }
+}
+
+# Two random passwords, one for each rotator, to be rotated by the rotators
+resource "random_password" "manage_session_secret_a" {
+  length  = 32
+  special = true
+  keepers = {
+    rotation = time_rotating.manage_session_secret_a.id
+  }
+}
+
+resource "azurerm_key_vault_secret" "manage_session_secret_a" {
+  key_vault_id    = azurerm_key_vault.main.id
+  name            = "${local.service_name}-manage-session-secret-a"
+  value           = random_password.manage_session_secret_a.result
+  content_type    = "session-secret"
+  expiration_date = time_rotating.manage_session_secret_a.rotation_rfc3339
+
+  depends_on = [
+    azurerm_private_endpoint.keyvault,
+    azurerm_private_dns_zone_virtual_network_link.keyvault
+  ]
+
+  tags = merge(
+    local.tags,
+    var.environment == "prod" ? local.resource_tags["key_vault_secret_manage_session_secret"] : {}
+  )
+}
+
+resource "random_password" "manage_session_secret_b" {
+  length  = 32
+  special = true
+  keepers = {
+    rotation = time_rotating.manage_session_secret_b.id
+  }
+}
+
+resource "azurerm_key_vault_secret" "manage_session_secret_b" {
+  key_vault_id    = azurerm_key_vault.main.id
+  name            = "${local.service_name}-manage-session-secret-b"
+  value           = random_password.manage_session_secret_b.result
+  content_type    = "session-secret"
+  expiration_date = time_rotating.manage_session_secret_b.rotation_rfc3339
+
+  depends_on = [
+    azurerm_private_endpoint.keyvault,
+    azurerm_private_dns_zone_virtual_network_link.keyvault
+  ]
+
+  tags = merge(
+    local.tags,
+    var.environment == "prod" ? local.resource_tags["key_vault_secret_manage_session_secret"] : {}
+  )
+}
+
+# Legacy secret for the initial deployment, to be deleted after session secret lifecycle is complete with margin (min 72h to allow cookies to expire)
 resource "random_password" "manage_session_secret" {
   length  = 32
   special = true
 }
 
 resource "azurerm_key_vault_secret" "manage_session_secret" {
-  #checkov:skip=CKV_AZURE_41: TODO: Secret rotation
   key_vault_id = azurerm_key_vault.main.id
   name         = "${local.service_name}-manage-session-secret"
   value        = random_password.manage_session_secret.result

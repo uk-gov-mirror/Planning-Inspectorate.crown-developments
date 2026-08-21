@@ -70,8 +70,10 @@ module "app_s62a_portal" {
     SQL_CONNECTION_STRING = local.key_vault_refs["sql-app-connection-string"]
 
     # sessions
-    REDIS_CONNECTION_STRING = local.key_vault_refs["redis-connection-string"]
-    SESSION_SECRET          = local.key_vault_refs["session-secret-s62a-portal"]
+    REDIS_CONNECTION_STRING  = local.key_vault_refs["redis-connection-string"]
+    SESSION_SECRET_PRIMARY   = time_rotating.s62a_portal_session_secret_a.unix > time_rotating.s62a_portal_session_secret_b.unix ? local.key_vault_refs["s62a_portal_session_secret_a"] : local.key_vault_refs["s62a_portal_session_secret_b"]
+    SESSION_SECRET_SECONDARY = time_rotating.s62a_portal_session_secret_a.unix > time_rotating.s62a_portal_session_secret_b.unix ? local.key_vault_refs["s62a_portal_session_secret_b"] : local.key_vault_refs["s62a_portal_session_secret_a"]
+
 
     # retries
     RETRY_MAX_ATTEMPTS = "3"
@@ -127,17 +129,62 @@ resource "azurerm_role_assignment" "app_s62a_portal_staging_secrets_user" {
 }
 
 ## sessions
-resource "random_password" "s62a_portal_session_secret" {
-  length  = 32
-  special = true
+#https://2mas.github.io/blog/rotating-azure-app-registration-secrets-with-terraform/
+# Two rotators, offset by half of the rotation period
+resource "time_rotating" "s62a_portal_session_secret_a" {
+  rotation_months = 6
 }
 
-resource "azurerm_key_vault_secret" "s62a_portal_session_secret" {
-  #checkov:skip=CKV_AZURE_41: TODO: Secret rotation
-  key_vault_id = azurerm_key_vault.main.id
-  name         = "${local.service_name}-s62a-portal-session-secret"
-  value        = random_password.s62a_portal_session_secret.result
-  content_type = "session-secret"
+resource "time_rotating" "s62a_portal_session_secret_b" {
+  rfc3339         = timeadd(time_rotating.s62a_portal_session_secret_a.rfc3339, "2160h") # + 3 months
+  rotation_months = 6
+
+  lifecycle {
+    ignore_changes = [rfc3339]
+  }
+}
+
+# Two random passwords, one for each rotator, to be rotated by the rotators
+resource "random_password" "s62a_portal_session_secret_a" {
+  length  = 32
+  special = true
+  keepers = {
+    rotation = time_rotating.s62a_portal_session_secret_a.id
+  }
+}
+
+resource "azurerm_key_vault_secret" "s62a_portal_session_secret_a" {
+  key_vault_id    = azurerm_key_vault.main.id
+  name            = "${local.service_name}-s62a-portal-session-secret-a"
+  value           = random_password.s62a_portal_session_secret_a.result
+  content_type    = "session-secret"
+  expiration_date = time_rotating.s62a_portal_session_secret_a.rotation_rfc3339
+
+  depends_on = [
+    azurerm_private_endpoint.keyvault,
+    azurerm_private_dns_zone_virtual_network_link.keyvault
+  ]
+
+  tags = merge(
+    local.tags,
+    var.environment == "prod" ? local.resource_tags["key_vault_secret_s62a_portal_session_secret"] : {}
+  )
+}
+
+resource "random_password" "s62a_portal_session_secret_b" {
+  length  = 32
+  special = true
+  keepers = {
+    rotation = time_rotating.s62a_portal_session_secret_b.id
+  }
+}
+
+resource "azurerm_key_vault_secret" "s62a_portal_session_secret_b" {
+  key_vault_id    = azurerm_key_vault.main.id
+  name            = "${local.service_name}-s62a-portal-session-secret-b"
+  value           = random_password.s62a_portal_session_secret_b.result
+  content_type    = "session-secret"
+  expiration_date = time_rotating.s62a_portal_session_secret_b.rotation_rfc3339
 
   depends_on = [
     azurerm_private_endpoint.keyvault,

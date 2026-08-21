@@ -164,6 +164,18 @@ export function loadConfig() {
 		}
 	}
 
+	// Express-session can take an array of secrets to use
+	// It assigns [0] but considers any valid
+	const secrets = [
+		process.env.SESSION_SECRET_PRIMARY,
+		process.env.SESSION_SECRET_SECONDARY,
+		process.env.SESSION_SECRET
+	].filter(Boolean);
+
+	if (secrets.length === 0) {
+		throw new Error('At least one session secret must be provided');
+	}
+
 	config = {
 		appName: 'manage',
 		appHostname: APP_HOSTNAME,
@@ -220,7 +232,7 @@ export function loadConfig() {
 		session: {
 			redisPrefix: 'manage:',
 			redis: REDIS_CONNECTION_STRING,
-			secret: SESSION_SECRET
+			secret: secrets
 		},
 		sharePoint: {
 			disabled: sharePointDisabled,

@@ -20,7 +20,7 @@ export interface Config extends BaseConfig {
 	session: {
 		redisPrefix: string;
 		redis?: string;
-		secret: string;
+		secret: string[];
 	};
 	staticDir: string;
 	s62aDevContactInfo: {
@@ -53,7 +53,9 @@ export function loadConfig(): Config {
 		PORT,
 		NODE_ENV,
 		REDIS_CONNECTION_STRING,
-		SESSION_SECRET,
+		SESSION_SECRET, //TODO: Remove this in favour of using session secret primary and secondary
+		SESSION_SECRET_PRIMARY,
+		SESSION_SECRET_SECONDARY,
 		SQL_CONNECTION_STRING,
 		S62A_DEV_CONTACT_EMAIL,
 		FEATURE_FLAG_S62A_PORTAL_NOT_LIVE
@@ -61,8 +63,12 @@ export function loadConfig(): Config {
 
 	const buildConfig = loadBuildConfig();
 
-	if (!SESSION_SECRET) {
-		throw new Error('SESSION_SECRET is required');
+	const secrets: string[] = [SESSION_SECRET_PRIMARY, SESSION_SECRET_SECONDARY, SESSION_SECRET]
+		.map((s) => s?.trim())
+		.filter((s): s is string => !!s && s.length > 0);
+
+	if (secrets.length === 0) {
+		throw new Error('At least one session secret must be provided');
 	}
 
 	let httpPort = 8081;
@@ -92,7 +98,7 @@ export function loadConfig(): Config {
 		session: {
 			redisPrefix: 'portal:',
 			redis: REDIS_CONNECTION_STRING,
-			secret: SESSION_SECRET
+			secret: secrets
 		},
 		s62aDevContactInfo: {
 			email: S62A_DEV_CONTACT_EMAIL

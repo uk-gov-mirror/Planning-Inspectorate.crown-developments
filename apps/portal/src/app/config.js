@@ -36,7 +36,9 @@ export function loadConfig() {
 		PORT,
 		NODE_ENV,
 		REDIS_CONNECTION_STRING,
-		SESSION_SECRET,
+		SESSION_SECRET, // TODO: Remove this in favour of SESSION_SECRET_PRIMARY and SESSION_SECRET_SECONDARY
+		SESSION_SECRET_PRIMARY,
+		SESSION_SECRET_SECONDARY,
 		SHAREPOINT_DISABLED,
 		SHAREPOINT_DRIVE_ID,
 		SQL_CONNECTION_STRING,
@@ -50,8 +52,12 @@ export function loadConfig() {
 
 	const buildConfig = loadBuildConfig();
 
-	if (!SESSION_SECRET) {
-		throw new Error('SESSION_SECRET is required');
+	const secrets = [SESSION_SECRET_PRIMARY, SESSION_SECRET_SECONDARY, SESSION_SECRET]
+		.map((s) => s?.trim())
+		.filter((s) => !!s && s.length > 0);
+
+	if (secrets.length === 0) {
+		throw new Error('At least one session secret must be provided');
 	}
 
 	let httpPort = 8080;
@@ -122,7 +128,7 @@ export function loadConfig() {
 		session: {
 			redisPrefix: 'portal:',
 			redis: REDIS_CONNECTION_STRING,
-			secret: SESSION_SECRET
+			secret: secrets
 		},
 		// the static directory to serve assets from (images, css, etc..)
 		staticDir: buildConfig.staticDir,
