@@ -5,12 +5,13 @@ import type { AsyncRequestHandler } from '@pins/crowndev-lib/util/async-handler.
 import type { Prisma, PrismaClient } from '@pins/crowndev-database/src/client/client.ts';
 import { S62aCaseMapper, type CreateCaseAnswers, type CreateInputOptions } from './s62a-case-mapper.ts';
 import {
+	PRE_APPLICATION_ADVICE_FOLDER,
 	PRE_APPLICATION_ADVICE_ID,
 	PRE_APPLICATION_OR_APPLICATION_ID
 } from '@pins/crowndev-database/src/seed/s62a/data-static.ts';
 import type { RequestHandler } from 'express';
 import { createFolders, findFolders, FOLDERS_MAP } from '../util/folders.ts';
-import { isPreApplicationCaseLinkable } from '../util/pre-application.ts';
+import { isPreApplicationAdviceGiven, isPreApplicationCaseLinkable } from '../util/pre-application.ts';
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>;
 
@@ -59,7 +60,14 @@ export function buildSaveController(service: ManageService): AsyncRequestHandler
 				if (isPhasePopulated) {
 					logger.info({ reference: caseRef }, 'creating folders for s62a case');
 
-					const foldersToCreate = findFolders(phase, FOLDERS_MAP);
+					const needsAdviceFolder =
+						phase === PRE_APPLICATION_OR_APPLICATION_ID.APPLICATION &&
+						isPreApplicationAdviceGiven(answers.preApplicationAdviceId);
+
+					const foldersToCreate = [
+						...findFolders(phase, FOLDERS_MAP),
+						...(needsAdviceFolder ? [PRE_APPLICATION_ADVICE_FOLDER] : [])
+					];
 					await createFolders(foldersToCreate, created.id, $tx);
 
 					logger.info({ reference: caseRef }, 'created folders for s62a case');
