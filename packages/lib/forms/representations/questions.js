@@ -27,9 +27,10 @@ import {
 	representationsContactQuestions
 } from './question-utils.js';
 import DateValidator from '@planning-inspectorate/dynamic-forms/src/validator/date-validator.js';
-import MultiFieldInputValidator from '@planning-inspectorate/dynamic-forms/src/validator/multi-field-input-validator.js';
+import MultiFieldInputValidator from '@pins/crowndev-lib/validators/multi-field-input-validator.js';
 import DocumentUploadValidator from '@planning-inspectorate/dynamic-forms/src/validator/document-upload-validator.js';
 import CustomManageListValidator from '../custom-components/manage-list/validator.js';
+import NameValidator from '../../validators/name-validator.ts';
 
 export const ACCEPT_AND_REDACT = 'accept-and-redact';
 
@@ -231,37 +232,21 @@ export const getQuestions = ({
 					fields: [
 						{
 							fieldName: 'representedFirstName',
-							required: true,
-							errorMessage: 'First name must be between 1 and 250 characters',
-							minLength: {
-								minLength: 1,
-								minLengthMessage: 'First name must be between 1 and 250 characters'
-							},
-							maxLength: {
-								maxLength: 250,
-								maxLengthMessage: `First name must be between 1 and 250 characters`
-							},
-							regex: {
-								regex: "^[A-Za-z0-9 '’-]*$",
-								regexMessage: 'First name must only include letters, spaces, hyphens, apostrophes or numbers'
-							}
+							validators: [
+								new RequiredValidator('First name must be between 1 and 250 characters'),
+								new NameValidator({
+									label: 'First name'
+								})
+							]
 						},
 						{
 							fieldName: 'representedLastName',
-							required: true,
-							errorMessage: 'Last name must be between 1 and 250 characters',
-							minLength: {
-								minLength: 1,
-								minLengthMessage: 'Last name must be between 1 and 250 characters'
-							},
-							maxLength: {
-								maxLength: 250,
-								maxLengthMessage: `Last name must be between 1 and 250 characters`
-							},
-							regex: {
-								regex: "^[A-Za-z0-9 '’-]*$",
-								regexMessage: 'Last name must only include letters, spaces, hyphens, apostrophes or numbers'
-							}
+							validators: [
+								new RequiredValidator('Last name must be between 1 and 250 characters'),
+								new NameValidator({
+									label: 'Last name'
+								})
+							]
 						}
 					]
 				})
@@ -544,37 +529,21 @@ export const getQuestions = ({
 					fields: [
 						{
 							fieldName: 'groupRepresentedFirstName',
-							required: true,
-							errorMessage: 'First name must be between 1 and 250 characters',
-							minLength: {
-								minLength: 1,
-								minLengthMessage: 'First name must be between 1 and 250 characters'
-							},
-							maxLength: {
-								maxLength: 250,
-								maxLengthMessage: `First name must be between 1 and 250 characters`
-							},
-							regex: {
-								regex: "^[A-Za-z0-9 '’-]*$",
-								regexMessage: 'First name must only include letters, spaces, hyphens, apostrophes or numbers'
-							}
+							validators: [
+								new RequiredValidator('First name must be between 1 and 250 characters'),
+								new NameValidator({
+									label: 'First name'
+								})
+							]
 						},
 						{
 							fieldName: 'groupRepresentedLastName',
-							required: true,
-							errorMessage: 'Last name must be between 1 and 250 characters',
-							minLength: {
-								minLength: 1,
-								minLengthMessage: 'Last name must be between 1 and 250 characters'
-							},
-							maxLength: {
-								maxLength: 250,
-								maxLengthMessage: `Last name must be between 1 and 250 characters`
-							},
-							regex: {
-								regex: "^[A-Za-z0-9 '’-]*$",
-								regexMessage: 'Last name must only include letters, spaces, hyphens, apostrophes or numbers'
-							}
+							validators: [
+								new RequiredValidator('Last name must be between 1 and 250 characters'),
+								new NameValidator({
+									label: 'Last name'
+								})
+							]
 						}
 					]
 				})
