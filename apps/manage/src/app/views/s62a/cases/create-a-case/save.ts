@@ -163,7 +163,7 @@ export async function generateS62aReference(
 
 	const isPreApp = applicationPhaseId === PRE_APPLICATION_OR_APPLICATION_ID.PRE_APPLICATION;
 
-	return isPreApp ? `S62A/PRE/${year}/${nextId}` : `S62A/${year}/${nextId}`;
+	return isPreApp ? `S62A/${year}/${nextId}/PRE` : `S62A/${year}/${nextId}`;
 }
 
 /**
