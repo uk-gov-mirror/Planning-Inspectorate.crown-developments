@@ -73,6 +73,7 @@ export function representationToManageViewModel(representation, applicationRefer
 		model.myselfAttachments = representation.Attachments;
 		model.myselfBlobAttachments = representation.Attachments;
 		model.myselfRedactedAttachments = mapRedactedAttachments(representation.Attachments);
+		model.myselfWithholdName = mapFieldValue(representation.withholdName);
 	} else if (representation.submittedForId === REPRESENTATION_SUBMITTED_FOR_ID.ON_BEHALF_OF) {
 		model.representedTypeId = representation.representedTypeId;
 		model.submitterFirstName = representation.SubmittedByContact?.firstName;
@@ -86,6 +87,7 @@ export function representationToManageViewModel(representation, applicationRefer
 		model.submitterAttachments = representation.Attachments;
 		model.submitterBlobAttachments = representation.Attachments;
 		model.submitterRedactedAttachments = mapRedactedAttachments(representation.Attachments);
+		model.submitterWithholdName = mapFieldValue(representation.withholdName);
 
 		const primaryRepresentedContact = representation.RepresentedContact || representation.RepresentedContacts?.[0];
 
@@ -426,6 +428,10 @@ export function viewModelToS62aRepresentationCreateInput(answers, reference, app
 
 	const createInput = getBaseRepresentationCreateInput(answers, reference, applicationId, prefix);
 
+	if (answers[`${prefix}WithholdName`]) {
+		createInput.withholdName = yesNoToBoolean(answers[`${prefix}WithholdName`]);
+	}
+
 	if (isRepresentation) {
 		createInput.RepresentedType = { connect: { id: answers.representedTypeId } };
 
@@ -530,6 +536,12 @@ export function s62aEditsToDatabaseUpdates(edits, viewModel) {
 				create: [payloads.representedContactUpdate]
 			};
 		}
+	}
+
+	if ('myselfWithholdName' in edits) {
+		updateInput.withholdName = yesNoToBoolean(edits.myselfWithholdName);
+	} else if ('submitterWithholdName' in edits) {
+		updateInput.withholdName = yesNoToBoolean(edits.submitterWithholdName);
 	}
 
 	return updateInput;
