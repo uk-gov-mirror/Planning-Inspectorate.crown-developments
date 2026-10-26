@@ -15,6 +15,7 @@ import { nameToViewModel } from '@pins/crowndev-lib/util/name.js';
 import { getPaginationParams, createPaginationParams } from '@pins/crowndev-lib/views/pagination/pagination-utils.ts';
 import { getStringParam } from '@pins/crowndev-lib/util/params.ts';
 import { isValidUuidFormat } from '@pins/crowndev-lib/util/uuid.ts';
+import { createWhereClause, normaliseSearchQuery, splitStringQueries } from '@pins/crowndev-lib/util/search-queries.js';
 import { notFoundHandler } from '@planning-inspectorate/core/middleware';
 import { wrapPrismaError } from '@planning-inspectorate/core/util';
 import { isNowAfterStartDate } from '@planning-inspectorate/dynamic-forms';
@@ -81,11 +82,23 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 		const { pageSize, skipSize } = getPaginationParams(req);
 		const publishDate = s62aCase.representationsPublishDate;
 		const representationsArePublished = publishDate !== null && isNowAfterStartDate(publishDate);
+		const searchValue = normaliseSearchQuery(req.query?.searchCriteria) ?? '';
+		const hasSearch = searchValue.length > 0;
+		const searchCriteria = createWhereClause(splitStringQueries(searchValue), [
+			{ parent: 'RepresentedContacts', parentIsList: true, fields: ['firstName', 'lastName', 'orgName'] },
+			{ parent: 'SubmittedByContact', fields: ['firstName', 'lastName'] },
+			{ fields: ['commentRedacted'] },
+			{ fields: ['comment'], constraints: [{ commentRedacted: { equals: null } }] }
+		]);
 
 		const [representations, totalAcceptedRepresentations, totalRepresentations] = await Promise.all([
 			representationsArePublished
 				? db.s62aRepresentation.findMany({
-						where: { applicationId: id, statusId: REPRESENTATION_STATUS_ID.ACCEPTED },
+						where: {
+							applicationId: id,
+							statusId: REPRESENTATION_STATUS_ID.ACCEPTED,
+							...searchCriteria
+						},
 						select: representationSelect,
 						orderBy: { submittedDate: 'desc' },
 						skip: skipSize,
@@ -93,7 +106,11 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 					})
 				: Promise.resolve([]),
 			db.s62aRepresentation.count({
-				where: { applicationId: id, statusId: REPRESENTATION_STATUS_ID.ACCEPTED }
+				where: {
+					applicationId: id,
+					statusId: REPRESENTATION_STATUS_ID.ACCEPTED,
+					...searchCriteria
+				}
 			}),
 			db.s62aRepresentation.count({ where: { applicationId: id } })
 		]).catch((error) => {
@@ -123,7 +140,7 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 			true
 		);
 		const representationMessage =
-			representations.length > 0
+			hasSearch || representations.length > 0
 				? []
 				: getRepresentationMessages(
 						representationCaseFields,
@@ -142,7 +159,9 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 			baseUrl: req.baseUrl,
 			currentUrl: req.originalUrl,
 			queryParams: req.query,
-			caseFields
+			caseFields,
+			hasSearch,
+			searchValue
 		});
 	};
 }

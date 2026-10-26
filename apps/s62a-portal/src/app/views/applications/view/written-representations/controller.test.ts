@@ -109,7 +109,8 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 
 		const req = {
 			params: { applicationId: validUuid },
-			originalUrl: `/applications/${validUuid}/written-representations`
+			originalUrl: `/applications/${validUuid}/written-representations`,
+			query: { searchCriteria: 'Alex' }
 		} as any;
 
 		const res = {
@@ -123,6 +124,9 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 
 		assert.strictEqual(dbMock.s62aCase.findUnique.mock.callCount(), 1);
 		assert.strictEqual(dbMock.s62aRepresentation.count.mock.callCount(), 2);
+		assert.deepStrictEqual(dbMock.s62aRepresentation.findMany.mock.calls[0].arguments[0].where.AND[0].OR[0], {
+			RepresentedContacts: { some: { firstName: { contains: 'Alex' } } }
+		});
 
 		assert.strictEqual(res.render.mock.callCount(), 1);
 
@@ -139,6 +143,8 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 		assert.strictEqual(payload.caseFields.reference, 'S62A/2026/0001');
 
 		assert.deepStrictEqual(payload.representationMessage, []);
+		assert.strictEqual(payload.hasSearch, true);
+		assert.strictEqual(payload.searchValue, 'Alex');
 		assert.strictEqual(payload.representations.length, 1);
 		assert.strictEqual(payload.representations[0].representationTitle, 'Alex Agent on behalf of Group One, Group Two');
 		assert.ok(payload.links);

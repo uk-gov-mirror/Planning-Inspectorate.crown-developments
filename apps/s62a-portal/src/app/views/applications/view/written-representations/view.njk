@@ -6,6 +6,7 @@
 {% from "application-links/application-links.njk" import applicationLinks %}
 {% import "pagination/pagination.njk" as pagination %}
 {% import "pagination/pagination-options.njk" as paginationOptions %}
+{% from "search-bar/search-bar.njk" import searchBar %}
 
 {% block pageHeading %}{% endblock %}
 
@@ -37,7 +38,36 @@
 			</div>
 			<div class="govuk-grid-row">
 				<div class="govuk-grid-column-full">
-					{% if representations|length > 0 %}
+					{% if representationMessage|length < 1 %}
+						<form id="search-bar-form" method="GET" action="{{ baseUrl }}">
+							<input type="hidden" name="itemsPerPage" value="{{ paginationParams.selectedItemsPerPage }}">
+							{{ searchBar({
+								input: {
+									label: {
+										text: "Search written representations",
+										isSubheading: true
+									},
+									hint: {
+										text: "Search by keywords or by name of person or organisation who made the submission."
+									},
+									classes: "govuk-input govuk-input--width-30"
+								},
+								button: {
+									text: "Search",
+									classes: "govuk-button"
+								}
+							}, searchValue) }}
+						</form>
+						{% if hasSearch and representations|length > 0 %}
+							<p class="govuk-body govuk-!-margin-bottom-0">
+								<a href="{{ baseUrl }}" class="govuk-link govuk-link--no-visited-state">Clear search</a>
+							</p>
+						{% endif %}
+					{% endif %}
+					{% if representations|length == 0 and hasSearch %}
+						<p class="govuk-body">No results were found.</p>
+						<p class="govuk-body"><a href="{{ baseUrl }}" class="govuk-link govuk-link--no-visited-state">Clear search</a> to view all representations.</p>
+					{% elif representationMessage|length < 1 and representations|length > 0 %}
 						<div id="pagination" class="govuk-body">
 							<p class="govuk-body">
 								Showing <strong>{{ paginationParams.resultsStartNumber }}</strong> to
