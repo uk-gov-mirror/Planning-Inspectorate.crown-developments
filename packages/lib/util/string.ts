@@ -3,6 +3,12 @@ import type { Response, Request, NextFunction } from 'express';
 import { getStringParam } from '@pins/crowndev-lib/util/params.ts';
 import { notFoundHandler } from '@pins/crowndev-lib/middleware/errors.ts';
 
+export interface CountStringConfig {
+	zeroItems?: string;
+	oneItem: string;
+	multipleItems: (count: number) => string;
+}
+
 /**
  * Convert camelCaseString to url-case-string.
  */
@@ -149,4 +155,12 @@ export function validateIdFormat(req: Request, res: Response, next: NextFunction
 		return notFoundHandler(req, res);
 	}
 	next();
+}
+
+/**
+ * Returns variable string based on count (e.g. 1 document uploaded vs 2 documents uploaded)
+ */
+export function getCountString(count: number, config: CountStringConfig): string {
+	if (count === 1) return config.oneItem;
+	return count === 0 && config.zeroItems ? config.zeroItems : config.multipleItems(count);
 }

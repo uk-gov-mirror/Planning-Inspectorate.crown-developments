@@ -11,7 +11,8 @@ import {
 	insertWbr,
 	formatStatusTag,
 	stringToKebab,
-	lowerFirst
+	lowerFirst,
+	getCountString
 } from './string.ts';
 
 describe('string util', () => {
@@ -336,6 +337,29 @@ describe('string util', () => {
 		});
 		it('handles an empty string', () => {
 			assert.strictEqual(lowerFirst(''), '');
+		});
+	});
+	describe('getCountString', () => {
+		const config = {
+			zeroItems: 'No files selected to move',
+			oneItem: 'Move 1 file',
+			multipleItems: (count: number) => `Move ${count} files`
+		};
+
+		it('should return the zeroItems heading when count is 0', () => {
+			assert.strictEqual(getCountString(0, config), 'No files selected to move');
+		});
+
+		it('should return the oneItem heading when count is 1', () => {
+			assert.strictEqual(getCountString(1, config), 'Move 1 file');
+		});
+
+		it('should return the multipleItems heading when count is greater than 1', () => {
+			assert.strictEqual(getCountString(2, config), 'Move 2 files');
+		});
+
+		it('should pass the count to the multipleItems formatter', () => {
+			assert.strictEqual(getCountString(27, config), 'Move 27 files');
 		});
 	});
 });
