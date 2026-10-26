@@ -5,7 +5,7 @@ import type { Service } from '../../app/base-service.ts';
 import type { ErrorSummaryItem } from '../../util/types.ts';
 import { mapDateFilterErrorSummary } from '../../filters/filter-error-summary.ts';
 
-const excludedFilterKeys = ['itemsPerPage', 'page', 'searchCriteria'] as const;
+const excludedFilterKeys = ['itemsPerPage', 'page', 'searchCriteria', 'formType'] as const;
 
 export { getFilterQueryItems };
 

@@ -4,18 +4,24 @@ import {
 	REPRESENTATION_SUBMITTED_FOR_ID,
 	REPRESENTED_TYPE_ID
 } from '@pins/crowndev-database/src/seed/data-static.ts';
-import {
-	getRepresentationMessages,
-	representationToViewModel,
-	type RepresentationWithContacts
-} from '@pins/crowndev-lib/written-representations/view-model.ts';
-import { applicationLinks } from '@pins/crowndev-lib/util/shared-view-model.ts';
+import type { RepresentationWithContacts } from '@pins/crowndev-lib/written-representations/view-model.ts';
 import { fetchPublishedS62aApplication } from '@pins/crowndev-lib/util/applications.ts';
 import { nameToViewModel } from '@pins/crowndev-lib/util/name.js';
-import { getPaginationParams, createPaginationParams } from '@pins/crowndev-lib/views/pagination/pagination-utils.ts';
+import { getPaginationParams } from '@pins/crowndev-lib/views/pagination/pagination-utils.ts';
 import { getStringParam } from '@pins/crowndev-lib/util/params.ts';
 import { isValidUuidFormat } from '@pins/crowndev-lib/util/uuid.ts';
 import { createWhereClause, normaliseSearchQuery, splitStringQueries } from '@pins/crowndev-lib/util/search-queries.js';
+import { parseDateFromParts } from '@pins/crowndev-lib/validators/date-filter-validator.js';
+import { sanitiseQueryToStringArray, toQueryFilters } from '@pins/crowndev-lib/filters/filter-utils.ts';
+import { buildFilters } from './filters/filters.ts';
+import {
+	getFiltersAndErrors,
+	hasQueries,
+	mapWithAndWithoutToBoolean
+} from '@pins/crowndev-lib/written-representations/filters/filters.ts';
+import { endOfDay, startOfDay } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+import { buildWrittenRepresentationsPage } from '@pins/crowndev-lib/written-representations/controller.ts';
 import { notFoundHandler } from '@planning-inspectorate/core/middleware';
 import { wrapPrismaError } from '@planning-inspectorate/core/util';
 import { isNowAfterStartDate } from '@planning-inspectorate/dynamic-forms';
@@ -43,7 +49,7 @@ const representationSelect = {
 	Attachments: { select: { statusId: true } }
 } satisfies Prisma.S62aRepresentationSelect;
 
-function mapRepresentation(representation: RepresentationWithContacts) {
+function prepareRepresentation(representation: RepresentationWithContacts): RepresentationWithContacts {
 	const representedGroupName =
 		representation.submittedForId === REPRESENTATION_SUBMITTED_FOR_ID.ON_BEHALF_OF &&
 		representation.representedTypeId === REPRESENTED_TYPE_ID.GROUP &&
@@ -55,9 +61,7 @@ function mapRepresentation(representation: RepresentationWithContacts) {
 					.join(', ') ?? '')
 			: representation.representedGroupName;
 
-	return representationToViewModel({ ...representation, representedGroupName }, true, {
-		showWithheldNameAsInterestedParty: true
-	});
+	return { ...representation, representedGroupName };
 }
 
 export function buildS62AWrittenRepresentationsPage(service: S62APortalService): AsyncRequestHandler {
@@ -78,12 +82,60 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 			return notFoundHandler(req, res);
 		}
 
-		const caseFields = s62aCaseToRawViewModel(s62aCase as S62aCaseWithRelations);
+		const caseFields = {
+			...s62aCaseToRawViewModel(s62aCase as S62aCaseWithRelations),
+			representationsPeriodStartDate: s62aCase.representationsPeriodStartDate,
+			representationsPeriodEndDate: s62aCase.representationsPeriodEndDate
+		};
 		const { pageSize, skipSize } = getPaginationParams(req);
 		const publishDate = s62aCase.representationsPublishDate;
 		const representationsArePublished = publishDate !== null && isNowAfterStartDate(publishDate);
-		const searchValue = normaliseSearchQuery(req.query?.searchCriteria) ?? '';
-		const hasSearch = searchValue.length > 0;
+		const queryFilters = toQueryFilters(req.query);
+		const searchValue = normaliseSearchQuery(queryFilters.searchCriteria) ?? '';
+		const hasSearch = Boolean(queryFilters.searchCriteria);
+		const { filters, filterQueryItems, errorSummary, dateErrors, isMobileFilterOpen } = await getFiltersAndErrors(
+			service,
+			id,
+			req.query,
+			buildFilters
+		);
+
+		const filterSubmittedBy = sanitiseQueryToStringArray(queryFilters.filterSubmittedBy);
+		const filterByAttachments = sanitiseQueryToStringArray(queryFilters.filterByAttachments);
+		const filterBySubmissionFromDateRaw = parseDateFromParts(
+			normaliseSearchQuery(queryFilters['submittedDateFrom-day']),
+			normaliseSearchQuery(queryFilters['submittedDateFrom-month']),
+			normaliseSearchQuery(queryFilters['submittedDateFrom-year'])
+		);
+		const filterBySubmissionToDateRaw = parseDateFromParts(
+			normaliseSearchQuery(queryFilters['submittedDateTo-day']),
+			normaliseSearchQuery(queryFilters['submittedDateTo-month']),
+			normaliseSearchQuery(queryFilters['submittedDateTo-year'])
+		);
+		const filterBySubmissionFromDate = filterBySubmissionFromDateRaw
+			? startOfDay(toZonedTime(filterBySubmissionFromDateRaw, 'Europe/London'))
+			: null;
+		const filterBySubmissionToDate = filterBySubmissionToDateRaw
+			? toZonedTime(filterBySubmissionToDateRaw, 'Europe/London')
+			: null;
+		const filterBySubmissionToDateEndOfDay = filterBySubmissionToDate ? endOfDay(filterBySubmissionToDate) : null;
+		const mappedFilterByAttachments = mapWithAndWithoutToBoolean(
+			filterByAttachments,
+			'withAttachments',
+			'withoutAttachments'
+		);
+		const whereFilters = {
+			...(filterSubmittedBy.length && { categoryId: { in: filterSubmittedBy } }),
+			...(mappedFilterByAttachments.length === 1 && { containsAttachments: mappedFilterByAttachments[0] }),
+			...(filterBySubmissionFromDate || filterBySubmissionToDateEndOfDay
+				? {
+						submittedDate: {
+							...(filterBySubmissionFromDate && { gte: filterBySubmissionFromDate }),
+							...(filterBySubmissionToDateEndOfDay && { lte: filterBySubmissionToDateEndOfDay })
+						}
+					}
+				: {})
+		};
 		const searchCriteria = createWhereClause(splitStringQueries(searchValue), [
 			{ parent: 'RepresentedContacts', parentIsList: true, fields: ['firstName', 'lastName', 'orgName'] },
 			{ parent: 'SubmittedByContact', fields: ['firstName', 'lastName'] },
@@ -97,7 +149,8 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 						where: {
 							applicationId: id,
 							statusId: REPRESENTATION_STATUS_ID.ACCEPTED,
-							...searchCriteria
+							...searchCriteria,
+							...whereFilters
 						},
 						select: representationSelect,
 						orderBy: { submittedDate: 'desc' },
@@ -109,7 +162,8 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 				where: {
 					applicationId: id,
 					statusId: REPRESENTATION_STATUS_ID.ACCEPTED,
-					...searchCriteria
+					...searchCriteria,
+					...whereFilters
 				}
 			}),
 			db.s62aRepresentation.count({ where: { applicationId: id } })
@@ -123,45 +177,36 @@ export function buildS62AWrittenRepresentationsPage(service: S62APortalService):
 			throw error;
 		});
 
-		const representationCaseFields = {
-			reference: caseFields.reference,
-			applicationStatus: caseFields.applicationStatus,
-			representationsPeriodStartDate: s62aCase.representationsPeriodStartDate,
-			representationsPeriodEndDate: s62aCase.representationsPeriodEndDate,
-			representationsPublishDate: publishDate
-		};
-		const links = applicationLinks(
-			id,
-			{ start: null, end: null },
-			publishDate,
-			false,
-			caseFields.applicationStatus,
-			tabText,
-			true
-		);
-		const representationMessage =
-			hasSearch || representations.length > 0
-				? []
-				: getRepresentationMessages(
-						representationCaseFields,
-						totalAcceptedRepresentations > 0,
-						totalRepresentations > 0
-					);
+		const mobileFilters = filters.map((filter) => {
+			if (filter.type !== 'date-input') {
+				return { ...filter };
+			}
 
-		return res.render('views/applications/view/written-representations/view.njk', {
-			pageCaption: caseFields.reference,
-			pageTitle: 'Written representations',
-			applicationReference: caseFields.reference,
-			representations: representations.map(mapRepresentation),
-			representationMessage,
-			links,
-			paginationParams: createPaginationParams(req, totalAcceptedRepresentations),
-			baseUrl: req.baseUrl,
-			currentUrl: req.originalUrl,
-			queryParams: req.query,
-			caseFields,
-			hasSearch,
-			searchValue
+			return {
+				...filter,
+				dateInputs: filter.dateInputs.map((dateInput) => ({
+					...dateInput,
+					...(dateInput.id && { id: `${dateInput.id}-mobile` }),
+					...(dateInput.idPrefix && { idPrefix: `${dateInput.idPrefix}-mobile` })
+				}))
+			};
 		});
+
+		return buildWrittenRepresentationsPage(
+			caseFields,
+			representations.map(prepareRepresentation),
+			totalAcceptedRepresentations,
+			totalRepresentations,
+			tabText,
+			true,
+			filters,
+			mobileFilters,
+			isMobileFilterOpen,
+			hasQueries(queryFilters),
+			hasSearch,
+			filterQueryItems,
+			errorSummary,
+			dateErrors
+		)(req, res);
 	};
 }

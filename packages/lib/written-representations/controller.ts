@@ -74,7 +74,7 @@ export function buildWrittenRepresentationsPage(
 					showWithheldNameAsInterestedParty: true
 				})
 			),
-			representationMessages,
+			representationMessage: representationMessages,
 			links,
 			paginationParams,
 			baseUrl: req.baseUrl,

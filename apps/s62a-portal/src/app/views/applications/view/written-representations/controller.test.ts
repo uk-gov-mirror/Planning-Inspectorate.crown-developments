@@ -1,6 +1,10 @@
 import assert from 'assert';
 import { describe, it } from 'node:test';
-import { REPRESENTATION_SUBMITTED_FOR_ID, REPRESENTED_TYPE_ID } from '@pins/crowndev-database/src/seed/data-static.ts';
+import {
+	REPRESENTATION_CATEGORY_ID,
+	REPRESENTATION_SUBMITTED_FOR_ID,
+	REPRESENTED_TYPE_ID
+} from '@pins/crowndev-database/src/seed/data-static.ts';
 import { buildS62AWrittenRepresentationsPage } from './controller.ts';
 import type { S62APortalService } from '#service';
 
@@ -110,7 +114,17 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 		const req = {
 			params: { applicationId: validUuid },
 			originalUrl: `/applications/${validUuid}/written-representations`,
-			query: { searchCriteria: 'Alex' }
+			query: {
+				searchCriteria: 'Alex',
+				filterSubmittedBy: [REPRESENTATION_CATEGORY_ID.INTERESTED_PARTIES],
+				filterByAttachments: ['withAttachments'],
+				'submittedDateFrom-day': '1',
+				'submittedDateFrom-month': '1',
+				'submittedDateFrom-year': '2026',
+				'submittedDateTo-day': '2',
+				'submittedDateTo-month': '1',
+				'submittedDateTo-year': '2026'
+			}
 		} as any;
 
 		const res = {
@@ -123,16 +137,21 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 		await handler(req, res, context.mock.fn() as any);
 
 		assert.strictEqual(dbMock.s62aCase.findUnique.mock.callCount(), 1);
-		assert.strictEqual(dbMock.s62aRepresentation.count.mock.callCount(), 2);
-		assert.deepStrictEqual(dbMock.s62aRepresentation.findMany.mock.calls[0].arguments[0].where.AND[0].OR[0], {
+		assert.strictEqual(dbMock.s62aRepresentation.count.mock.callCount(), 6);
+		const where = dbMock.s62aRepresentation.findMany.mock.calls[0].arguments[0].where;
+		assert.deepStrictEqual(where.AND[0].OR[0], {
 			RepresentedContacts: { some: { firstName: { contains: 'Alex' } } }
 		});
+		assert.deepStrictEqual(where.categoryId.in, [REPRESENTATION_CATEGORY_ID.INTERESTED_PARTIES]);
+		assert.strictEqual(where.containsAttachments, true);
+		assert.ok(where.submittedDate.gte instanceof Date);
+		assert.ok(where.submittedDate.lte instanceof Date);
 
 		assert.strictEqual(res.render.mock.callCount(), 1);
 
 		const [template, payload] = res.render.mock.calls[0].arguments;
 
-		assert.strictEqual(template, 'views/applications/view/written-representations/view.njk');
+		assert.strictEqual(template, './view.njk');
 
 		assert.strictEqual(payload.pageCaption, 'S62A/2026/0001');
 		assert.strictEqual(payload.pageTitle, 'Written representations');
@@ -145,6 +164,7 @@ describe('buildS62AWrittenRepresentationsPage', () => {
 		assert.deepStrictEqual(payload.representationMessage, []);
 		assert.strictEqual(payload.hasSearch, true);
 		assert.strictEqual(payload.searchValue, 'Alex');
+		assert.strictEqual(payload.hasQueries, true);
 		assert.strictEqual(payload.representations.length, 1);
 		assert.strictEqual(payload.representations[0].representationTitle, 'Alex Agent on behalf of Group One, Group Two');
 		assert.ok(payload.links);
