@@ -5,6 +5,8 @@ import {
 import { toText } from '@pins/crowndev-lib/audit/resolvers/util/values.ts';
 import { escapeHtml } from '@pins/crowndev-lib/util/string.ts';
 
+export const MAX_VEHICLE_PARKING_SPACES = 99_999;
+
 type VehicleParkingItem = Record<string, unknown>;
 
 /**

@@ -71,7 +71,7 @@ import TelephoneNumberValidator from '@pins/crowndev-lib/validators/telephone-nu
 import MultiConditionalNumericValidator from '@pins/crowndev-lib/forms/custom-components/multi-conditional-radio/multi-conditional-numeric-validator.ts';
 import UniqueListFieldValidator from '@pins/crowndev-lib/validators/unique-list-field-validator.ts';
 import { toIntOrNull } from '@pins/crowndev-lib/util/numbers.ts';
-import { vehicleParkingRemovalSummary, vehicleTypeName } from '../util/vehicle-parking.ts';
+import { MAX_VEHICLE_PARKING_SPACES, vehicleParkingRemovalSummary, vehicleTypeName } from '../util/vehicle-parking.ts';
 import { escapeHtml, insertWbr } from '@pins/crowndev-lib/util/string.ts';
 import type { EntraGroupMembers } from '@pins/crowndev-lib/util/entra-groups.ts';
 import RequiredGroupValidator from '@pins/crowndev-lib/validators/required-group-validator.ts';
@@ -1525,6 +1525,10 @@ export function getQuestions(
 				new NumericValidator({
 					regex: /^\d+$/,
 					regexMessage: 'The total number of existing spaces must be a number'
+				}),
+				new NumericValidator({
+					max: MAX_VEHICLE_PARKING_SPACES,
+					maxMessage: 'The total number of existing spaces must be 99,999 spaces or less'
 				})
 			]
 		},
@@ -1553,6 +1557,10 @@ export function getQuestions(
 				new NumericValidator({
 					regex: /^\d+$/,
 					regexMessage: 'The total number of proposed spaces must be a number'
+				}),
+				new NumericValidator({
+					max: MAX_VEHICLE_PARKING_SPACES,
+					maxMessage: 'The total number of proposed spaces must be 99,999 spaces or less'
 				})
 			]
 		},
