@@ -1478,6 +1478,7 @@ export function getQuestions(
 			question: 'What is the type of vehicle for the proposed on-site parking spaces?',
 			fieldName: 'vehicleType',
 			url: 'vehicle-type',
+			viewData: { continueButtonText: 'Continue' },
 			boldSummaryValue: true,
 			conditionalTriggerValue: 'other',
 			conditionalDbFieldName: 'otherVehicleType',
@@ -1515,6 +1516,7 @@ export function getQuestions(
 			question: 'What is the total number of existing spaces for this vehicle type?',
 			fieldName: 'existingSpaces',
 			url: 'existing-spaces',
+			viewData: { continueButtonText: 'Continue' },
 			suffix: 'spaces',
 			summaryLabel: 'Existing spaces',
 			summarySuffixes: {
@@ -1542,6 +1544,7 @@ export function getQuestions(
 			question: 'What is the total number of proposed spaces for this vehicle type?',
 			fieldName: 'proposedSpaces',
 			url: 'proposed-spaces',
+			viewData: { continueButtonText: 'Continue' },
 			suffix: 'spaces',
 			summaryLabel: 'Proposed spaces',
 			summarySuffixes: {
@@ -1601,6 +1604,7 @@ export function getQuestions(
 			question: 'Which appointed person/inspector is assigned to this case?',
 			fieldName: 'inspectorId',
 			url: 'inspector',
+			viewData: { continueButtonText: 'Continue' },
 			validators: [new RequiredValidator('Select an inspector')],
 			options: referenceDataToRadioOptions(groupMembers.s62aInspectors, true)
 		},
@@ -1611,6 +1615,7 @@ export function getQuestions(
 			hint: 'For example, 27 3 2007',
 			fieldName: 'inspectorAssignedDate',
 			url: 'inspector-assigned-date',
+			viewData: { continueButtonText: 'Continue' },
 			validators: [new DateValidator('inspector assigned date')]
 		},
 		inspectorAppointedDate: {
@@ -1620,6 +1625,7 @@ export function getQuestions(
 			hint: 'For example, 27 3 2007',
 			fieldName: 'inspectorAppointedDate',
 			url: 'inspector-appointed-date',
+			viewData: { continueButtonText: 'Continue' },
 			validators: [new DateValidator('inspector appointed date')]
 		},
 		caseOfficer: {
@@ -1698,6 +1704,7 @@ export function getQuestions(
 			title: 'Applicant organisation name',
 			question: 'What is the name of the applicant organisation?',
 			url: 'applicant-organisation-name',
+			viewData: { continueButtonText: 'Continue' },
 			fieldName: 'organisationName',
 			validators: [new RequiredValidator('Enter the name of the applicant organisation')]
 		},
@@ -1706,6 +1713,7 @@ export function getQuestions(
 			title: 'Applicant address',
 			question: 'What is the address of the applicant organisation?',
 			url: 'applicant-organisation-address',
+			viewData: { continueButtonText: 'Continue' },
 			fieldName: 'organisationAddress',
 			validators: [new AddressValidator()]
 		},
@@ -1819,6 +1827,7 @@ export function getQuestions(
 			question: 'What is the contact type?',
 			fieldName: 'additionalContactType',
 			url: 'additional-contact-type',
+			viewData: { continueButtonText: 'Continue' },
 			conditionalTriggerValue: 'other',
 			conditionalDbFieldName: 'otherContactType',
 			options: [
@@ -1851,6 +1860,7 @@ export function getQuestions(
 			question: 'Who is the contact?',
 			fieldName: 'additionalContactName',
 			url: 'additional-contact-name',
+			viewData: { continueButtonText: 'Continue' },
 			inputFields: [
 				{
 					fieldName: 'firstName',
@@ -1911,6 +1921,7 @@ export function getQuestions(
 			question: 'Contact address details (optional)',
 			fieldName: 'additionalContactAddress',
 			url: 'additional-contact-address',
+			viewData: { continueButtonText: 'Continue' },
 			validators: [new AddressValidator()]
 		},
 		additionalContactDetails: {
@@ -1919,6 +1930,7 @@ export function getQuestions(
 			question: 'What are the contact details?',
 			fieldName: 'additionalContactDetails',
 			url: 'additional-contact-details',
+			viewData: { continueButtonText: 'Continue' },
 			inputFields: [
 				{
 					fieldName: 'emailAddress',
@@ -2333,6 +2345,7 @@ export function getQuestions(
 			question: 'Which types of waste are applicable to this development?',
 			fieldName: 'wasteTypeId',
 			url: 'waste-types',
+			viewData: { continueButtonText: 'Continue' },
 			boldSummaryValue: true,
 			validators: [
 				new RequiredValidator('Select type of waste'),
@@ -2354,6 +2367,7 @@ export function getQuestions(
 			hint: 'This includes engineering surcharge and making no allowance for cover or restoration material in cubic metres. For solid waste use tonnes or litres for liquid waste. e.g. 100.25',
 			fieldName: 'voidCapacityUnitId',
 			url: 'total-void-capacity',
+			viewData: { continueButtonText: 'Continue' },
 			summaryLabel: 'Capacity',
 			summarySuffixes: WASTE_UNIT_SUFFIXES,
 			roundDecimals: true,
@@ -2390,6 +2404,7 @@ export function getQuestions(
 			hint: 'e.g. 10.25',
 			fieldName: 'maxAnnualThroughputUnitId',
 			url: 'max-annual-throughput',
+			viewData: { continueButtonText: 'Continue' },
 			summaryLabel: 'Throughput',
 			summarySuffixes: WASTE_UNIT_SUFFIXES,
 			roundDecimals: true,
